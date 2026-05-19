@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import './App.css'
 
 const mobileMenuItems = [
-  'Best Seller',
   'Shirt',
   'Pants',
   'Dress',
@@ -17,6 +16,61 @@ const announcementMessages = [
   'Crafted in India. Delivered to the world.',
   'Buy 2 styles and save 12% on curated edits.',
   'Free shipping above Rs. 1,999 and easy returns.',
+]
+
+const offerSlides = [
+  {
+    id: 'welcome10',
+    label: 'First Order Special',
+    title: 'Get 10% Off On Your First Order',
+    code: 'WELCOME10',
+    description:
+      'Naye shoppers ke liye welcome offer. Shirt, dress, top ya co ord set par instant first order discount.',
+    stats: [
+      { value: '10%', label: 'Instant off' },
+      { value: 'New', label: 'Customer deal' },
+      { value: 'All', label: 'Main categories' },
+    ],
+  },
+  {
+    id: 'save5',
+    label: 'Shop More Save More',
+    title: 'Spend Rs. 2,999+ And Unlock 5% Off',
+    code: 'SAVE5',
+    description:
+      'Shorts, pants aur accessories ko mix karke cart value badhao aur extra savings pao.',
+    stats: [
+      { value: '5%', label: 'Cart discount' },
+      { value: '2999+', label: 'Order value' },
+      { value: 'Easy', label: 'Auto apply ready' },
+    ],
+  },
+  {
+    id: 'duo12',
+    label: 'Closet Combo',
+    title: 'Buy Any 2 Styles And Save 12%',
+    code: 'DUO12',
+    description:
+      'Top aur pants ya dress aur accessories combo ke saath weekend shopping ko aur rewarding banao.',
+    stats: [
+      { value: '2', label: 'Styles in cart' },
+      { value: '12%', label: 'Combo off' },
+      { value: 'Mix', label: 'Cross category' },
+    ],
+  },
+  {
+    id: 'luxe15',
+    label: 'Premium Offer',
+    title: 'Flat 15% Off Above Rs. 4,999',
+    code: 'LUXE15',
+    description:
+      'Festive dresses, co ord sets aur statement looks ke liye higher cart par bigger offer ready hai.',
+    stats: [
+      { value: '15%', label: 'Big savings' },
+      { value: '4999+', label: 'Premium spend' },
+      { value: 'Fast', label: 'Luxury checkout' },
+    ],
+  },
 ]
 
 const filters = ['Hindi', 'Rs', 'Color', 'Size']
@@ -38,6 +92,30 @@ const quickLinks = [
   'Refund Policy',
   'Shipping Policy',
   'Terms of Service',
+]
+
+const productImages = [
+  '/catalog/pexels-photo-34959983.jpeg',
+  '/catalog/pexels-photo-31589288.jpeg',
+  '/catalog/pexels-photo-27379814.webp',
+  '/catalog/pexels-photo-7572653.jpeg',
+  '/catalog/pexels-photo-36104929.jpeg',
+  '/catalog/pexels-photo-15569943.jpeg',
+  '/catalog/pexels-photo-31303399.jpeg',
+  '/catalog/pexels-photo-36409025.jpeg',
+  '/catalog/pexels-photo-17018847.jpeg',
+  '/catalog/pexels-photo-28683656.jpeg',
+  '/catalog/pexels-photo-12002408.jpeg',
+  '/catalog/pexels-photo-34421951.jpeg',
+  '/catalog/pexels-photo-16814117.jpeg',
+  '/catalog/pexels-photo-37255631.jpeg',
+  '/catalog/pexels-photo-31649562%20(1).jpeg',
+  '/catalog/pexels-photo-31649562.jpeg',
+  '/catalog/pexels-photo-29666299.jpeg',
+  '/catalog/pexels-photo-20544951.jpeg',
+  '/catalog/pexels-photo-17472034.jpeg',
+  '/catalog/pexels-photo-7249953.jpeg',
+  '/catalog/pexels-photo-14108017.jpeg',
 ]
 
 const products = [
@@ -489,6 +567,11 @@ const products = [
     },
   },
 ]
+  .slice(0, productImages.length)
+  .map((product, index) => ({
+  ...product,
+  image: productImages[index % productImages.length],
+}))
 
 function Icon({ name }) {
   const icons = {
@@ -537,46 +620,10 @@ function Icon({ name }) {
 
 function ProductArtwork({ product }) {
   return (
-    <div
-      className={`product-art product-art--${product.scene} product-art--${product.pattern || 'plain'}`}
-      style={{
-        '--scene-base': product.palette.sceneBase,
-        '--scene-accent': product.palette.sceneAccent,
-        '--floor-tone': product.palette.floorTone,
-        '--garment-primary': product.palette.garmentPrimary,
-        '--garment-secondary': product.palette.garmentSecondary,
-        '--accent-tone': product.palette.accentTone,
-        '--skin-tone': product.palette.skinTone,
-        '--hair-tone': product.palette.hairTone,
-      }}
-    >
+    <div className="product-art">
       {product.soldOut ? <span className="product-badge">Sold out</span> : null}
       {product.asSeenOn ? <span className="product-stamp">as seen on</span> : null}
-
-      {product.art === 'denim' ? (
-        <div className="denim-art">
-          <span className="denim-top" />
-          <span className="denim-leg denim-leg--left" />
-          <span className="denim-leg denim-leg--right" />
-          <span className="denim-cutout cutout-one" />
-          <span className="denim-cutout cutout-two" />
-          <span className="denim-cutout cutout-three" />
-        </div>
-      ) : (
-        <div className={`art-figure art-figure--${product.art} art-figure--${product.pose || 'front'}`}>
-          <span className="art-head" />
-          <span className="art-hair" />
-          <span className="art-arm art-arm--left" />
-          <span className="art-arm art-arm--right" />
-          <span className="art-garment" />
-          <span className="art-overlay" />
-          <span className="art-leg art-leg--left" />
-          <span className="art-leg art-leg--right" />
-          <span className="art-shoe art-shoe--left" />
-          <span className="art-shoe art-shoe--right" />
-          {product.hasBag ? <span className="art-bag" /> : null}
-        </div>
-      )}
+      <img className="product-image" src={product.image} alt={product.name} loading="lazy" />
     </div>
   )
 }
@@ -610,11 +657,22 @@ function ProductCard({ product }) {
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeMessage, setActiveMessage] = useState(0)
+  const [activeOffer, setActiveOffer] = useState(0)
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       setActiveMessage((current) => (current + 1) % announcementMessages.length)
     }, 3800)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [])
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setActiveOffer((current) => (current + 1) % offerSlides.length)
+    }, 4200)
 
     return () => {
       window.clearInterval(intervalId)
@@ -763,6 +821,60 @@ function App() {
       </aside>
 
       <main className="collection-page" id="collection">
+        <section className="offer-slider-section" aria-label="Offers">
+          <div className="offer-slider-copy">
+            <p className="collection-label">Featured Offers</p>
+            <h2>Shop offers that slide automatically</h2>
+            <p className="collection-text">
+              First order par 10% off hero offer ke saath aur bhi cart deals rotate hongi,
+              taki homepage par savings instantly visible rahein.
+            </p>
+          </div>
+
+          <div className="offer-slider-frame">
+            <div
+              className="offer-slider-track"
+              style={{ transform: `translateX(-${activeOffer * 100}%)` }}
+            >
+              {offerSlides.map((offer) => (
+                <article key={offer.id} className="offer-slide-card">
+                  <div className="offer-slide-content">
+                    <span className="offer-pill">{offer.label}</span>
+                    <h3>{offer.title}</h3>
+                    <p>{offer.description}</p>
+                    <div className="offer-code-row">
+                      <span>Use code</span>
+                      <strong>{offer.code}</strong>
+                    </div>
+                  </div>
+
+                  <div className="offer-stats-grid">
+                    {offer.stats.map((stat) => (
+                      <div key={stat.label} className="offer-stat-card">
+                        <strong>{stat.value}</strong>
+                        <span>{stat.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="offer-dots" role="tablist" aria-label="Offer slides">
+            {offerSlides.map((offer, index) => (
+              <button
+                key={offer.id}
+                type="button"
+                className={index === activeOffer ? 'is-active' : ''}
+                aria-label={`Show ${offer.label}`}
+                aria-selected={index === activeOffer}
+                onClick={() => setActiveOffer(index)}
+              />
+            ))}
+          </div>
+        </section>
+
         <section className="collection-hero">
           <p className="collection-label">Home page direction inspired by your reference</p>
           <h1>Best Seller</h1>

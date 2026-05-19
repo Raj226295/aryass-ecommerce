@@ -335,15 +335,21 @@
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
+  height: 100%;
 }
 
 .product-art {
   position: relative;
   aspect-ratio: 0.76;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 22%, rgba(255, 255, 255, 0.38), transparent 42%),
-    linear-gradient(180deg, var(--scene-base) 0%, var(--scene-accent) 72%, var(--floor-tone) 72%, var(--floor-tone) 100%);
+  background: #f3efe9;
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
 }
 
 .product-art--plain {
@@ -825,6 +831,10 @@
 }
 
 .product-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-start;
   text-align: center;
 }
 
@@ -865,6 +875,7 @@
 
 .option-button {
   width: 100%;
+  margin-top: auto;
   padding: 0.9rem 1rem;
   border: 1px solid #171615;
   background: #ffffff;
