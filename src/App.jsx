@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 
-const menuItems = [
+const mobileMenuItems = [
+  'Best Seller',
   'Shirt',
   'Pants',
   'Dress',
@@ -11,173 +12,612 @@ const menuItems = [
   'Accessories',
 ]
 
-const offerSlides = [
-  {
-    id: 'welcome10',
-    label: 'First Order Offer',
-    title: 'Get 10% Off On Your First Aryass Order',
-    description:
-      'New customers ke liye instant welcome savings. Premium picks add karo aur checkout par code apply karo.',
-    code: 'WELCOME10',
-    highlight: 'New Shopper Favorite',
-    metrics: [
-      { value: '10%', label: 'Instant savings' },
-      { value: '0', label: 'Minimum cart hassle' },
-      { value: '24/7', label: 'Always visible offer' },
-    ],
-  },
-  {
-    id: 'duo12',
-    label: 'Closet Builder',
-    title: 'Buy Any 2 Styles And Save 12%',
-    description:
-      'Shirts, tops, pants, ya shorts ko mix karo aur wardrobe upgrade ko thoda aur rewarding banao.',
-    code: 'DUO12',
-    highlight: 'Best For Everyday Looks',
-    metrics: [
-      { value: '2+', label: 'Styles in cart' },
-      { value: '12%', label: 'Bundle discount' },
-      { value: '7 Days', label: 'Easy returns' },
-    ],
-  },
-  {
-    id: 'luxe15',
-    label: 'Festive Edit',
-    title: 'Flat 15% Off Above Rs. 4,999',
-    description:
-      'Dresses aur co ord sets ke saath elevated festive shopping. Higher cart value par bigger reward.',
-    code: 'LUXE15',
-    highlight: 'Limited Time Pick',
-    metrics: [
-      { value: '15%', label: 'Premium savings' },
-      { value: '4999+', label: 'Order value' },
-      { value: 'Fast', label: 'Dispatch support' },
-    ],
-  },
-  {
-    id: 'acc5',
-    label: 'Finishing Touch',
-    title: 'Accessories Par 5% Extra Off Above Rs. 2,999',
-    description:
-      'Statement add-ons ke saath final cart polish karo. Small accessories ko strong styling moment banao.',
-    code: 'STYLE5',
-    highlight: 'Perfect Add-On Deal',
-    metrics: [
-      { value: '5%', label: 'Extra discount' },
-      { value: '2999+', label: 'Spend threshold' },
-      { value: 'Gift Ready', label: 'Elegant packaging' },
-    ],
-  },
+const announcementMessages = [
+  'First order par 10% off | Use code WELCOME10',
+  'Crafted in India. Delivered to the world.',
+  'Buy 2 styles and save 12% on curated edits.',
+  'Free shipping above Rs. 1,999 and easy returns.',
 ]
 
-const categoryCards = [
-  {
-    name: 'Shirt',
-    tag: 'Sharp Layers',
-    description: 'Clean tailoring, premium textures, and day-to-night silhouettes.',
-    gradient:
-      'linear-gradient(135deg, rgba(255, 241, 225, 0.95), rgba(214, 173, 127, 0.72))',
-    accent: '#c98a4d',
-  },
-  {
-    name: 'Pants',
-    tag: 'Easy Structure',
-    description: 'Fluid fall, polished fits, and neutral tones for repeat styling.',
-    gradient:
-      'linear-gradient(135deg, rgba(231, 216, 204, 0.95), rgba(143, 104, 78, 0.75))',
-    accent: '#8a5a3c',
-  },
-  {
-    name: 'Dress',
-    tag: 'Event Ready',
-    description: 'Feminine drape and standout movement for festive or evening looks.',
-    gradient:
-      'linear-gradient(135deg, rgba(246, 218, 229, 0.95), rgba(196, 123, 150, 0.75))',
-    accent: '#b85f82',
-  },
-  {
-    name: 'Top',
-    tag: 'Modern Basics',
-    description: 'Soft statement pieces built for layering, brunch plans, and travel days.',
-    gradient:
-      'linear-gradient(135deg, rgba(255, 236, 214, 0.95), rgba(224, 145, 91, 0.74))',
-    accent: '#d17b39',
-  },
-  {
-    name: 'Co ord set',
-    tag: 'Complete Looks',
-    description: 'Minimal effort styling with elevated two-piece and matching sets.',
-    gradient:
-      'linear-gradient(135deg, rgba(238, 223, 203, 0.95), rgba(161, 124, 83, 0.75))',
-    accent: '#9f7342',
-  },
-  {
-    name: 'Shorts',
-    tag: 'Breezy Edit',
-    description: 'Relaxed fits and chic comfort for warm-weather dressing.',
-    gradient:
-      'linear-gradient(135deg, rgba(246, 230, 210, 0.95), rgba(190, 139, 101, 0.75))',
-    accent: '#bb7b4b',
-  },
-  {
-    name: 'Accessories',
-    tag: 'Final Touches',
-    description: 'Bags, accents, and luxe extras that finish every outfit beautifully.',
-    gradient:
-      'linear-gradient(135deg, rgba(242, 228, 202, 0.95), rgba(142, 117, 71, 0.78))',
-    accent: '#8e6d36',
-  },
+const filters = ['Hindi', 'Rs', 'Color', 'Size']
+
+const shopLinks = [
+  'Daily Drop',
+  'Winter Collection',
+  'Best Seller',
+  'Western Wear',
+  'Returns & Exchanges',
+  'Maharani Sale',
 ]
 
-const benefits = [
-  'Free shipping above Rs. 1,999',
-  'Easy returns within 7 days',
-  'Fresh offers rotating automatically',
+const quickLinks = [
+  'About Us',
+  'Collaboration',
+  'Contact Information',
+  'Privacy Policy',
+  'Refund Policy',
+  'Shipping Policy',
+  'Terms of Service',
+]
+
+const products = [
+  {
+    name: 'Blush Bloom Dress',
+    price: '1,650.00',
+    rating: 5,
+    reviews: 2,
+    soldOut: true,
+    art: 'mini',
+    pose: 'lean',
+    scene: 'studio',
+    palette: {
+      sceneBase: '#f3e5d9',
+      sceneAccent: '#edcdc8',
+      floorTone: '#ead7c6',
+      garmentPrimary: '#f3b1d0',
+      garmentSecondary: '#e57abb',
+      accentTone: '#fff2f8',
+      skinTone: '#d6a180',
+      hairTone: '#6b402f',
+    },
+  },
+  {
+    name: 'Merlot Shirt Dress',
+    price: '3,495.00',
+    art: 'shirtdress',
+    pose: 'hands',
+    scene: 'studio',
+    palette: {
+      sceneBase: '#f0dfd1',
+      sceneAccent: '#e8cab2',
+      floorTone: '#e4d0bf',
+      garmentPrimary: '#7f362f',
+      garmentSecondary: '#57221d',
+      accentTone: '#9f625d',
+      skinTone: '#c88967',
+      hairTone: '#402723',
+    },
+  },
+  {
+    name: 'Cream Dot Shift',
+    price: '2,990.00',
+    rating: 5,
+    reviews: 2,
+    soldOut: true,
+    art: 'shift',
+    pose: 'hands',
+    scene: 'studio',
+    palette: {
+      sceneBase: '#f3e5d6',
+      sceneAccent: '#edd3c0',
+      floorTone: '#ead6c2',
+      garmentPrimary: '#f3ebd9',
+      garmentSecondary: '#d9cfb3',
+      accentTone: '#a9864f',
+      skinTone: '#d7a47f',
+      hairTone: '#6a4732',
+    },
+  },
+  {
+    name: 'Ivory Whisper Maxi',
+    price: '3,490.00',
+    art: 'maxi',
+    pose: 'front',
+    scene: 'studio',
+    palette: {
+      sceneBase: '#efe5d8',
+      sceneAccent: '#ead6c6',
+      floorTone: '#e7d8ca',
+      garmentPrimary: '#f6f4ef',
+      garmentSecondary: '#ddd5ca',
+      accentTone: '#ffffff',
+      skinTone: '#c68f70',
+      hairTone: '#5b382b',
+    },
+  },
+  {
+    name: 'Noa Stripe Dress',
+    price: '3,448.00',
+    soldOut: true,
+    art: 'mini',
+    pose: 'front',
+    scene: 'studio',
+    pattern: 'stripe',
+    palette: {
+      sceneBase: '#eee0d0',
+      sceneAccent: '#e7d2bc',
+      floorTone: '#e2cdb8',
+      garmentPrimary: '#efe2cc',
+      garmentSecondary: '#cfa06f',
+      accentTone: '#ffffff',
+      skinTone: '#d09b75',
+      hairTone: '#664333',
+    },
+  },
+  {
+    name: 'Mili Garden Dress',
+    price: '2,200.00',
+    soldOut: true,
+    art: 'mini',
+    pose: 'hands',
+    scene: 'studio',
+    pattern: 'floral',
+    palette: {
+      sceneBase: '#efe2d4',
+      sceneAccent: '#ead5bf',
+      floorTone: '#e5d1bf',
+      garmentPrimary: '#f6d9dd',
+      garmentSecondary: '#de8ba8',
+      accentTone: '#f8f1bf',
+      skinTone: '#d09a73',
+      hairTone: '#654432',
+    },
+  },
+  {
+    name: 'Pleated Candy Dress',
+    price: '3,490.00',
+    rating: 5,
+    reviews: 1,
+    art: 'mini',
+    pose: 'walk',
+    scene: 'studio',
+    palette: {
+      sceneBase: '#f5e7dc',
+      sceneAccent: '#efd6cb',
+      floorTone: '#ead2c0',
+      garmentPrimary: '#f3c0df',
+      garmentSecondary: '#d57eb2',
+      accentTone: '#ffdceb',
+      skinTone: '#d49d79',
+      hairTone: '#57362c',
+    },
+  },
+  {
+    name: 'Midnight Lane Gown',
+    price: '3,500.00',
+    art: 'maxi',
+    pose: 'walk',
+    scene: 'night',
+    hasBag: true,
+    palette: {
+      sceneBase: '#1f1d2b',
+      sceneAccent: '#f1ad68',
+      floorTone: '#4d3d4f',
+      garmentPrimary: '#141414',
+      garmentSecondary: '#050505',
+      accentTone: '#3ee3ae',
+      skinTone: '#d09c79',
+      hairTone: '#2c1c18',
+    },
+  },
+  {
+    name: 'Go Denim Co ord',
+    price: '1,650.00',
+    rating: 5,
+    reviews: 4,
+    soldOut: true,
+    art: 'coord',
+    pose: 'front',
+    scene: 'plain',
+    palette: {
+      sceneBase: '#f3efe9',
+      sceneAccent: '#ece8e4',
+      floorTone: '#e6dfd7',
+      garmentPrimary: '#416a9d',
+      garmentSecondary: '#24486f',
+      accentTone: '#7bb4ff',
+      skinTone: '#d29d79',
+      hairTone: '#422b25',
+    },
+  },
+  {
+    name: 'Embroidered Noir',
+    price: '1,600.00',
+    rating: 5,
+    reviews: 6,
+    art: 'maxi',
+    pose: 'front',
+    scene: 'plain',
+    asSeenOn: true,
+    palette: {
+      sceneBase: '#efeff2',
+      sceneAccent: '#e6e6ec',
+      floorTone: '#dfdfe6',
+      garmentPrimary: '#171717',
+      garmentSecondary: '#050505',
+      accentTone: '#bfa16a',
+      skinTone: '#d1a082',
+      hairTone: '#3b2a27',
+    },
+  },
+  {
+    name: 'Rose Wonder Dress',
+    price: '1,600.00',
+    art: 'maxi',
+    pose: 'front',
+    scene: 'plain',
+    asSeenOn: true,
+    palette: {
+      sceneBase: '#efeff3',
+      sceneAccent: '#e7e7ec',
+      floorTone: '#e1dfea',
+      garmentPrimary: '#ef5f9a',
+      garmentSecondary: '#c9336d',
+      accentTone: '#f6c1d7',
+      skinTone: '#d19f7f',
+      hairTone: '#3f2826',
+    },
+  },
+  {
+    name: 'Meher Print Dress',
+    price: '1,650.00',
+    rating: 5,
+    reviews: 1,
+    art: 'maxi',
+    pose: 'front',
+    scene: 'plain',
+    pattern: 'print',
+    palette: {
+      sceneBase: '#efeff2',
+      sceneAccent: '#e9e8ef',
+      floorTone: '#e1dfe7',
+      garmentPrimary: '#3d3434',
+      garmentSecondary: '#9e513c',
+      accentTone: '#ed8f42',
+      skinTone: '#cd9878',
+      hairTone: '#3c2824',
+    },
+  },
+  {
+    name: 'Scarlet Sindoor',
+    price: '1,850.00',
+    rating: 5,
+    reviews: 4,
+    art: 'maxi',
+    pose: 'front',
+    scene: 'plain',
+    asSeenOn: true,
+    palette: {
+      sceneBase: '#f1f0f4',
+      sceneAccent: '#e8e6ee',
+      floorTone: '#dedce6',
+      garmentPrimary: '#e94a44',
+      garmentSecondary: '#b72a26',
+      accentTone: '#ffb6a7',
+      skinTone: '#c99577',
+      hairTone: '#402825',
+    },
+  },
+  {
+    name: 'Fuchsia V Neck Co ord',
+    price: '1,232.00',
+    oldPrice: '1,450.00',
+    soldOut: true,
+    art: 'coord',
+    pose: 'hands',
+    scene: 'plain',
+    palette: {
+      sceneBase: '#efeff3',
+      sceneAccent: '#e8e8ee',
+      floorTone: '#dfdfe7',
+      garmentPrimary: '#f11b86',
+      garmentSecondary: '#ca116b',
+      accentTone: '#ff83be',
+      skinTone: '#d09b79',
+      hairTone: '#402827',
+    },
+  },
+  {
+    name: 'Royal Blue Edit',
+    price: '1,899.00',
+    rating: 5,
+    reviews: 6,
+    art: 'maxi',
+    pose: 'front',
+    scene: 'plain',
+    asSeenOn: true,
+    palette: {
+      sceneBase: '#f1eff4',
+      sceneAccent: '#e8e6ec',
+      floorTone: '#dedce4',
+      garmentPrimary: '#3066b8',
+      garmentSecondary: '#1a4790',
+      accentTone: '#b9d3ff',
+      skinTone: '#cc987a',
+      hairTone: '#372725',
+    },
+  },
+  {
+    name: 'Little Heart Jeans',
+    price: '2,500.00',
+    art: 'denim',
+    scene: 'plain',
+    asSeenOn: true,
+    palette: {
+      sceneBase: '#ececf2',
+      sceneAccent: '#e3e3ec',
+      floorTone: '#dadae4',
+      garmentPrimary: '#9eb4ce',
+      garmentSecondary: '#7694b8',
+      accentTone: '#ead6c5',
+      skinTone: '#c99773',
+      hairTone: '#372826',
+    },
+  },
+  {
+    name: 'Lifafa Denim Vest',
+    price: '1,800.00',
+    rating: 5,
+    reviews: 4,
+    art: 'vest',
+    pose: 'front',
+    scene: 'plain',
+    asSeenOn: true,
+    palette: {
+      sceneBase: '#f0f0f4',
+      sceneAccent: '#e8e8ef',
+      floorTone: '#e0dfe7',
+      garmentPrimary: '#ece4d8',
+      garmentSecondary: '#88a6cf',
+      accentTone: '#f4f2ee',
+      skinTone: '#cc9a78',
+      hairTone: '#3a2726',
+    },
+  },
+  {
+    name: 'Lara Cutwork Denim',
+    price: '2,300.00',
+    soldOut: true,
+    art: 'denim',
+    scene: 'plain',
+    asSeenOn: true,
+    palette: {
+      sceneBase: '#ededf2',
+      sceneAccent: '#e4e5eb',
+      floorTone: '#dcdce4',
+      garmentPrimary: '#8dadce',
+      garmentSecondary: '#6f8cb0',
+      accentTone: '#b07d54',
+      skinTone: '#cd9874',
+      hairTone: '#372927',
+    },
+  },
+  {
+    name: 'Cocoa Twist Set',
+    price: '2,099.00',
+    art: 'coord',
+    pose: 'hands',
+    scene: 'plain',
+    palette: {
+      sceneBase: '#efeff2',
+      sceneAccent: '#e7e7ed',
+      floorTone: '#dddddf',
+      garmentPrimary: '#6a412f',
+      garmentSecondary: '#3a231a',
+      accentTone: '#9d6a54',
+      skinTone: '#d5a181',
+      hairTone: '#30201b',
+    },
+  },
+  {
+    name: 'Rosey Gingham Maxi',
+    price: '1,995.00',
+    soldOut: true,
+    art: 'maxi',
+    pose: 'front',
+    scene: 'plain',
+    pattern: 'check',
+    palette: {
+      sceneBase: '#f0eff2',
+      sceneAccent: '#e8e7ed',
+      floorTone: '#dfe0e5',
+      garmentPrimary: '#f8dbe2',
+      garmentSecondary: '#e2b8c0',
+      accentTone: '#fff4f7',
+      skinTone: '#cf9c79',
+      hairTone: '#3b2725',
+    },
+  },
+  {
+    name: 'Young White Rich Shirt',
+    price: '5,145.00',
+    art: 'skirtset',
+    pose: 'front',
+    scene: 'studio',
+    palette: {
+      sceneBase: '#eee0d1',
+      sceneAccent: '#ead3bd',
+      floorTone: '#e0cdb7',
+      garmentPrimary: '#f8f6f2',
+      garmentSecondary: '#bb9465',
+      accentTone: '#e7c492',
+      skinTone: '#d09b75',
+      hairTone: '#5b3c30',
+    },
+  },
+  {
+    name: 'Florida Column Dress',
+    price: '2,998.00',
+    art: 'maxi',
+    pose: 'front',
+    scene: 'studio',
+    palette: {
+      sceneBase: '#efe1d3',
+      sceneAccent: '#e7d1bd',
+      floorTone: '#dfccb8',
+      garmentPrimary: '#f1eadb',
+      garmentSecondary: '#d6b27d',
+      accentTone: '#ffecbe',
+      skinTone: '#cf9c77',
+      hairTone: '#54372d',
+    },
+  },
+  {
+    name: 'House Of Pop Art',
+    price: '2,345.00',
+    art: 'shift',
+    pose: 'front',
+    scene: 'studio',
+    pattern: 'abstract',
+    palette: {
+      sceneBase: '#efdfd0',
+      sceneAccent: '#ead1bb',
+      floorTone: '#e1c9b4',
+      garmentPrimary: '#f6e3ca',
+      garmentSecondary: '#f08d55',
+      accentTone: '#2d353f',
+      skinTone: '#d19c75',
+      hairTone: '#58382d',
+    },
+  },
+  {
+    name: 'Old Money Set',
+    price: '1,449.00',
+    soldOut: true,
+    art: 'coord',
+    pose: 'front',
+    scene: 'plain',
+    palette: {
+      sceneBase: '#efeff3',
+      sceneAccent: '#e7e7ee',
+      floorTone: '#dddddf',
+      garmentPrimary: '#ec5c15',
+      garmentSecondary: '#c84a0c',
+      accentTone: '#ff9a5c',
+      skinTone: '#ce9877',
+      hairTone: '#372724',
+    },
+  },
 ]
 
 function Icon({ name }) {
-  if (name === 'menu') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M4 7h16M4 12h16M4 17h16" />
-      </svg>
-    )
-  }
-
-  if (name === 'close') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M6 6 18 18M18 6 6 18" />
-      </svg>
-    )
-  }
-
-  if (name === 'search') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M11 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm8 14-3.2-3.2" />
-      </svg>
-    )
+  const icons = {
+    menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+    close: <path d="M6 6 18 18M18 6 6 18" />,
+    search: <path d="M11 5a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm8 14-3.2-3.2" />,
+    account: (
+      <path d="M12 5a3.2 3.2 0 1 0 0 6.4A3.2 3.2 0 0 0 12 5Zm-5.2 13a5.2 5.2 0 0 1 10.4 0" />
+    ),
+    bag: <path d="M7 8V7a5 5 0 0 1 10 0v1M5 8h14l-1 11H6L5 8Z" />,
+    chevron: <path d="m9 6 6 6-6 6" />,
+    facebook: (
+      <path
+        d="M13.5 8H15V5.5h-1.9c-2.3 0-3.6 1.3-3.6 3.7V11H8v2.4h1.5V19H12v-5.6h2l.4-2.4h-2.4V9.5c0-.9.3-1.5 1.5-1.5Z"
+        fill="currentColor"
+        stroke="none"
+      />
+    ),
+    instagram: (
+      <>
+        <rect x="5" y="5" width="14" height="14" rx="4" />
+        <circle cx="12" cy="12" r="3.2" />
+        <circle cx="16.6" cy="7.6" r="0.8" fill="currentColor" stroke="none" />
+      </>
+    ),
+    youtube: (
+      <>
+        <path
+          d="M19 8.3c-.2-.9-.9-1.6-1.8-1.8C15.6 6 12 6 12 6s-3.6 0-5.2.5c-.9.2-1.6.9-1.8 1.8C4.5 10 4.5 12 4.5 12s0 2 .5 3.7c.2.9.9 1.6 1.8 1.8C8.4 18 12 18 12 18s3.6 0 5.2-.5c.9-.2 1.6-.9 1.8-1.8.5-1.7.5-3.7.5-3.7s0-2-.5-3.7Z"
+          fill="currentColor"
+          stroke="none"
+        />
+        <path d="m10.5 14.5 4-2.5-4-2.5Z" fill="currentColor" stroke="none" />
+      </>
+    ),
+    left: <path d="m14.5 6.5-5 5.5 5 5.5" />,
+    right: <path d="m9.5 6.5 5 5.5-5 5.5" />,
   }
 
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7 8V7a5 5 0 0 1 10 0v1M5 8h14l-1 11H6L5 8Z" />
+      {icons[name]}
     </svg>
+  )
+}
+
+function ProductArtwork({ product }) {
+  return (
+    <div
+      className={`product-art product-art--${product.scene} product-art--${product.pattern || 'plain'}`}
+      style={{
+        '--scene-base': product.palette.sceneBase,
+        '--scene-accent': product.palette.sceneAccent,
+        '--floor-tone': product.palette.floorTone,
+        '--garment-primary': product.palette.garmentPrimary,
+        '--garment-secondary': product.palette.garmentSecondary,
+        '--accent-tone': product.palette.accentTone,
+        '--skin-tone': product.palette.skinTone,
+        '--hair-tone': product.palette.hairTone,
+      }}
+    >
+      {product.soldOut ? <span className="product-badge">Sold out</span> : null}
+      {product.asSeenOn ? <span className="product-stamp">as seen on</span> : null}
+
+      {product.art === 'denim' ? (
+        <div className="denim-art">
+          <span className="denim-top" />
+          <span className="denim-leg denim-leg--left" />
+          <span className="denim-leg denim-leg--right" />
+          <span className="denim-cutout cutout-one" />
+          <span className="denim-cutout cutout-two" />
+          <span className="denim-cutout cutout-three" />
+        </div>
+      ) : (
+        <div className={`art-figure art-figure--${product.art} art-figure--${product.pose || 'front'}`}>
+          <span className="art-head" />
+          <span className="art-hair" />
+          <span className="art-arm art-arm--left" />
+          <span className="art-arm art-arm--right" />
+          <span className="art-garment" />
+          <span className="art-overlay" />
+          <span className="art-leg art-leg--left" />
+          <span className="art-leg art-leg--right" />
+          <span className="art-shoe art-shoe--left" />
+          <span className="art-shoe art-shoe--right" />
+          {product.hasBag ? <span className="art-bag" /> : null}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ProductCard({ product }) {
+  return (
+    <article className="product-card">
+      <ProductArtwork product={product} />
+
+      <div className="product-copy">
+        <h3>{product.name}</h3>
+        {product.rating ? (
+          <p className="rating-row">
+            {'\u2605'.repeat(product.rating)}
+            <span>({product.reviews})</span>
+          </p>
+        ) : null}
+        <p className="price-row">
+          {product.oldPrice ? <span className="old-price">Rs. {product.oldPrice}</span> : null}
+          <span>Rs. {product.price}</span>
+        </p>
+      </div>
+
+      <button type="button" className="option-button">
+        Choose options
+      </button>
+    </article>
   )
 }
 
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [activeOffer, setActiveOffer] = useState(0)
+  const [activeMessage, setActiveMessage] = useState(0)
 
   useEffect(() => {
-    const timerId = window.setInterval(() => {
-      setActiveOffer((currentOffer) => (currentOffer + 1) % offerSlides.length)
-    }, 4200)
+    const intervalId = window.setInterval(() => {
+      setActiveMessage((current) => (current + 1) % announcementMessages.length)
+    }, 3800)
 
     return () => {
-      window.clearInterval(timerId)
+      window.clearInterval(intervalId)
     }
   }, [])
 
@@ -204,51 +644,80 @@ function App() {
     }
   }, [isMenuOpen])
 
-  const currentOffer = offerSlides[activeOffer]
+  const currentMessage = announcementMessages[activeMessage]
 
   return (
     <div className="page-shell" id="top">
-      <div className="promo-strip">
-        <p>
-          <span>{currentOffer.label}</span>
-          {currentOffer.title} | Use code {currentOffer.code}
-        </p>
+      <div className="top-announcement">
+        <div className="social-strip">
+          <a href="#footer" aria-label="Facebook">
+            <Icon name="facebook" />
+          </a>
+          <a href="#footer" aria-label="Instagram">
+            <Icon name="instagram" />
+          </a>
+          <a href="#footer" aria-label="YouTube">
+            <Icon name="youtube" />
+          </a>
+        </div>
+
+        <div className="announcement-copy">
+          <button
+            type="button"
+            aria-label="Previous message"
+            onClick={() =>
+              setActiveMessage(
+                (activeMessage - 1 + announcementMessages.length) % announcementMessages.length,
+              )
+            }
+          >
+            <Icon name="left" />
+          </button>
+          <p>{currentMessage}</p>
+          <button
+            type="button"
+            aria-label="Next message"
+            onClick={() => setActiveMessage((activeMessage + 1) % announcementMessages.length)}
+          >
+            <Icon name="right" />
+          </button>
+        </div>
       </div>
 
       <header className="site-header">
-        <div className="header-start">
+        <div className="header-side header-side--left">
           <button
             type="button"
-            className="menu-toggle"
-            aria-label="Open categories menu"
+            className="header-icon"
+            aria-label="Open menu"
             aria-expanded={isMenuOpen}
             aria-controls="mobile-drawer"
             onClick={() => setIsMenuOpen(true)}
           >
             <Icon name="menu" />
           </button>
-
-          <a className="brand" href="#top">
-            ARYASS
-            <span>Feel before the moment</span>
-          </a>
-        </div>
-
-        <nav className="desktop-nav" aria-label="Primary">
-          <a href="#categories">Collections</a>
-          <a href="#offers">Offers</a>
-          <a href="#curated-edit">Curated Edit</a>
-          <a href="#login">Account</a>
-        </nav>
-
-        <div className="header-actions">
-          <button type="button" className="icon-button" aria-label="Search">
+          <button type="button" className="header-icon" aria-label="Search">
             <Icon name="search" />
           </button>
-          <a className="login-button" href="#login">
+        </div>
+
+        <a className="brand-mark" href="#top" aria-label="Aryass home">
+          <span className="brand-word">ARYASS</span>
+          <span className="brand-tagline">FEEL BEFORE THE MOMENT</span>
+        </a>
+
+        <div className="header-side header-side--right">
+          <a className="header-login" href="#login">
             Login
           </a>
-          <button type="button" className="icon-button bag-button" aria-label="Bag">
+          <button type="button" className="header-icon" aria-label="Account">
+            <Icon name="account" />
+          </button>
+          <button
+            type="button"
+            className="header-icon header-icon--cart"
+            aria-label="Shopping bag"
+          >
             <Icon name="bag" />
           </button>
         </div>
@@ -263,16 +732,16 @@ function App() {
       <aside
         id="mobile-drawer"
         className={`mobile-drawer ${isMenuOpen ? 'is-open' : ''}`}
-        aria-label="Mobile navigation"
+        aria-label="Navigation drawer"
       >
         <div className="drawer-header">
           <div>
-            <p className="drawer-label">Shop Menu</p>
-            <strong>Browse by category</strong>
+            <p className="drawer-kicker">Collections</p>
+            <strong>Browse Aryass</strong>
           </div>
           <button
             type="button"
-            className="drawer-close"
+            className="header-icon"
             aria-label="Close menu"
             onClick={() => setIsMenuOpen(false)}
           >
@@ -280,208 +749,130 @@ function App() {
           </button>
         </div>
 
-        <nav className="drawer-nav">
-          {menuItems.map((item) => (
-            <a key={item} href="#categories" onClick={() => setIsMenuOpen(false)}>
+        <nav className="drawer-links">
+          {mobileMenuItems.map((item) => (
+            <a key={item} href="#collection" onClick={() => setIsMenuOpen(false)}>
               {item}
             </a>
           ))}
         </nav>
 
-        <div className="drawer-footer">
-          <a className="drawer-login" href="#login" onClick={() => setIsMenuOpen(false)}>
-            Login / Account
-          </a>
-          <p>Free shipping above Rs. 1,999</p>
-        </div>
+        <a className="drawer-login" href="#login" onClick={() => setIsMenuOpen(false)}>
+          Login / Account
+        </a>
       </aside>
 
-      <main className="page-content">
-        <section className="hero-section">
-          <div className="hero-copy">
-            <p className="eyebrow">Luxury edits for everyday glamour</p>
-            <h1>Responsive fashion homepage with bold offers and a cleaner mobile menu.</h1>
-            <p className="hero-text">
-              Aryass ke liye homepage ko is tarah style kiya gaya hai ki mobile par hamburger
-              menu clean lage, login CTA visible rahe, aur offers auto-slide hote hue
-              instantly attention grab karein.
-            </p>
-
-            <div className="hero-actions">
-              <a className="primary-button" href="#categories">
-                Shop Collection
-              </a>
-              <a className="secondary-button" href="#offers">
-                View Offers
-              </a>
-            </div>
-
-            <div className="hero-benefits">
-              {benefits.map((benefit) => (
-                <div key={benefit} className="benefit-pill">
-                  <span />
-                  {benefit}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="hero-visual">
-            <div className="hero-offer-card">
-              <p>{currentOffer.label}</p>
-              <h2>{currentOffer.title}</h2>
-              <p className="hero-offer-copy">{currentOffer.description}</p>
-              <div className="hero-offer-code">Use code: {currentOffer.code}</div>
-            </div>
-
-            <div className="fashion-portrait" aria-hidden="true">
-              <div className="portrait-halo" />
-              <div className="portrait-figure">
-                <span className="figure-head" />
-                <span className="figure-hair" />
-                <span className="figure-body" />
-                <span className="figure-bag" />
-              </div>
-            </div>
-
-            <div className="floating-note">First order pe 10% off ab hero section me highlight hoga.</div>
-          </div>
+      <main className="collection-page" id="collection">
+        <section className="collection-hero">
+          <p className="collection-label">Home page direction inspired by your reference</p>
+          <h1>Best Seller</h1>
+          <p className="collection-text">
+            Clean collection-style homepage with dense product grid, lightweight filters,
+            center-brand header, and a responsive hamburger drawer.
+          </p>
         </section>
 
-        <section className="offers-section" id="offers">
-          <div className="section-copy">
-            <p className="eyebrow">Auto Sliding Offers</p>
-            <h2>Shop more, save more</h2>
-            <p>
-              Slider automatically rotate karega aur aapka first order 10% discount hamesha
-              pehla featured offer rahega.
-            </p>
-          </div>
-
-          <div className="slider-frame">
-            <div
-              className="slider-track"
-              style={{ transform: `translateX(-${activeOffer * 100}%)` }}
-            >
-              {offerSlides.map((offer) => (
-                <article key={offer.id} className="offer-slide">
-                  <div className="offer-copy">
-                    <span className="offer-chip">{offer.highlight}</span>
-                    <h3>{offer.title}</h3>
-                    <p>{offer.description}</p>
-                    <div className="offer-code">Use code: {offer.code}</div>
-                  </div>
-
-                  <div className="offer-metrics">
-                    {offer.metrics.map((metric) => (
-                      <div key={metric.label} className="metric-card">
-                        <strong>{metric.value}</strong>
-                        <span>{metric.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          <div className="slider-dots" role="tablist" aria-label="Offer slides">
-            {offerSlides.map((offer, index) => (
-              <button
-                key={offer.id}
-                type="button"
-                className={index === activeOffer ? 'is-active' : ''}
-                aria-label={`Show ${offer.label}`}
-                aria-selected={index === activeOffer}
-                onClick={() => setActiveOffer(index)}
-              />
+        <section className="toolbar-row">
+          <div className="filter-group">
+            <span>Filter:</span>
+            {filters.map((filter) => (
+              <button key={filter} type="button" className="toolbar-chip">
+                {filter}
+                <Icon name="chevron" />
+              </button>
             ))}
           </div>
-        </section>
 
-        <section className="categories-section" id="categories">
-          <div className="section-copy">
-            <p className="eyebrow">Hamburger Menu Categories</p>
-            <h2>Every requested category, now on the homepage too</h2>
-            <p>
-              Shirt se Accessories tak saare options mobile drawer aur landing grid dono me
-              aligned hain, taki browsing simple aur consistent rahe.
-            </p>
-          </div>
-
-          <div className="category-grid">
-            {categoryCards.map((category) => (
-              <article
-                key={category.name}
-                className="category-card"
-                style={{
-                  '--card-gradient': category.gradient,
-                  '--card-accent': category.accent,
-                }}
-              >
-                <div className="category-visual" aria-hidden="true">
-                  <span className="shape shape-one" />
-                  <span className="shape shape-two" />
-                  <span className="shape shape-three" />
-                </div>
-                <p className="category-tag">{category.tag}</p>
-                <h3>{category.name}</h3>
-                <p>{category.description}</p>
-              </article>
-            ))}
+          <div className="sort-group">
+            <span>Sort by:</span>
+            <button type="button" className="toolbar-chip">
+              Featured
+              <Icon name="chevron" />
+            </button>
+            <strong>66 products</strong>
           </div>
         </section>
 
-        <section className="curated-section" id="curated-edit">
-          <article className="curated-card curated-dark">
-            <p className="eyebrow">Curated Edit</p>
-            <h2>Made to feel festive, styled to stay wearable</h2>
-            <p>
-              Homepage ka mood luxury-meets-clean rakha gaya hai, jisme beige, black, aur warm
-              gold palette Aryass brand reference ko support karti hai.
-            </p>
-          </article>
-
-          <article className="curated-card curated-light">
-            <p className="eyebrow">Ready For Login CTA</p>
-            <h2>Account entry visible on both header and drawer</h2>
-            <p>
-              User ko login dhoondhna na pade, isliye desktop header aur mobile drawer dono
-              me account action place kiya gaya hai.
-            </p>
-          </article>
+        <section className="product-grid" aria-label="Best seller products">
+          {products.map((product) => (
+            <ProductCard key={product.name} product={product} />
+          ))}
         </section>
 
-        <section className="login-banner" id="login">
+        <div className="pagination">
+          <button type="button" className="is-active">
+            1
+          </button>
+          <button type="button">2</button>
+          <button type="button" aria-label="Next page">
+            <Icon name="chevron" />
+          </button>
+        </div>
+
+        <section className="login-callout" id="login">
           <div>
-            <p className="eyebrow">Login Button Added</p>
-            <h2>Welcome shoppers back with a clear account button</h2>
-            <p>
-              Sign in, saved wishlist, and exclusive drops jaise future flows ke liye ye CTA
-              ready position me hai.
-            </p>
+            <p className="callout-kicker">Login Button Added</p>
+            <h2>Saved wishlist, account access, and future offers are ready to plug in.</h2>
           </div>
-
-          <a className="primary-button" href="#top">
-            Login
-          </a>
+          <a href="#top">Login</a>
         </section>
       </main>
 
-      <footer className="site-footer">
-        <div>
-          <strong>ARYASS</strong>
-          <p>Luxury fashion edits with responsive browsing and rotating savings.</p>
+      <footer className="site-footer" id="footer">
+        <div className="footer-brand">
+          <a href="#top" className="footer-logo" aria-label="Aryass home">
+            <span className="brand-word">ARYASS</span>
+            <span className="brand-tagline">FEEL BEFORE THE MOMENT</span>
+          </a>
+          <div className="footer-socials">
+            <a href="#footer" aria-label="Facebook">
+              <Icon name="facebook" />
+            </a>
+            <a href="#footer" aria-label="Instagram">
+              <Icon name="instagram" />
+            </a>
+            <a href="#footer" aria-label="YouTube">
+              <Icon name="youtube" />
+            </a>
+          </div>
         </div>
-        <div>
-          <span>Contact</span>
-          <p>hello@aryass.com</p>
+
+        <div className="footer-column">
+          <h3>Shop</h3>
+          {shopLinks.map((link) => (
+            <a key={link} href="#collection">
+              {link}
+            </a>
+          ))}
         </div>
-        <div>
-          <span>Policies</span>
-          <p>Privacy Policy | Shipping | Returns</p>
+
+        <div className="footer-column">
+          <h3>Quick Links</h3>
+          {quickLinks.map((link) => (
+            <a key={link} href="#collection">
+              {link}
+            </a>
+          ))}
+        </div>
+
+        <div className="footer-column">
+          <h3>Our Achievements</h3>
+          <p>Forbes Recognized</p>
+          <p>Luxury edits made lighter for mobile browsing.</p>
         </div>
       </footer>
+
+      <div className="footer-legal">
+        <p>
+          (c) 2026, Aryass. Refund policy | Privacy policy | Terms of service | Shipping
+          policy | Contact information
+        </p>
+      </div>
+
+      <div className="live-chat">
+        <strong>Live Video Call</strong>
+        <span>Open now | Till 7:30 PM</span>
+      </div>
     </div>
   )
 }

@@ -1,11 +1,11 @@
 :root {
-  --bg: #f7efe6;
-  --surface: #fffaf5;
-  --ink: #26170f;
-  --muted: #6f5c4f;
-  --accent: #a67543;
-  --accent-deep: #6f4324;
-  --serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --bg: #ffffff;
+  --surface: #fbf8f2;
+  --ink: #171615;
+  --muted: #767067;
+  --accent: #b78d58;
+  --serif: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --brand: 'Avenir Next', 'Segoe UI', sans-serif;
   --sans: 'Avenir Next', 'Segoe UI', sans-serif;
   font-family: var(--sans);
   line-height: 1.5;
@@ -32,6 +32,7 @@ body {
   margin: 0;
   min-width: 320px;
   background: var(--bg);
+  color: var(--ink);
 }
 
 body,
