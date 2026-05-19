@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const mobileMenuItems = [
@@ -118,43 +118,17 @@ const productImages = [
   '/catalog/pexels-photo-14108017.jpeg',
 ]
 
-const products = [
+const baseProducts = [
   {
     name: 'Blush Bloom Dress',
     price: '1,650.00',
     rating: 5,
     reviews: 2,
     soldOut: true,
-    art: 'mini',
-    pose: 'lean',
-    scene: 'studio',
-    palette: {
-      sceneBase: '#f3e5d9',
-      sceneAccent: '#edcdc8',
-      floorTone: '#ead7c6',
-      garmentPrimary: '#f3b1d0',
-      garmentSecondary: '#e57abb',
-      accentTone: '#fff2f8',
-      skinTone: '#d6a180',
-      hairTone: '#6b402f',
-    },
   },
   {
     name: 'Merlot Shirt Dress',
     price: '3,495.00',
-    art: 'shirtdress',
-    pose: 'hands',
-    scene: 'studio',
-    palette: {
-      sceneBase: '#f0dfd1',
-      sceneAccent: '#e8cab2',
-      floorTone: '#e4d0bf',
-      garmentPrimary: '#7f362f',
-      garmentSecondary: '#57221d',
-      accentTone: '#9f625d',
-      skinTone: '#c88967',
-      hairTone: '#402723',
-    },
   },
   {
     name: 'Cream Dot Shift',
@@ -162,111 +136,30 @@ const products = [
     rating: 5,
     reviews: 2,
     soldOut: true,
-    art: 'shift',
-    pose: 'hands',
-    scene: 'studio',
-    palette: {
-      sceneBase: '#f3e5d6',
-      sceneAccent: '#edd3c0',
-      floorTone: '#ead6c2',
-      garmentPrimary: '#f3ebd9',
-      garmentSecondary: '#d9cfb3',
-      accentTone: '#a9864f',
-      skinTone: '#d7a47f',
-      hairTone: '#6a4732',
-    },
   },
   {
     name: 'Ivory Whisper Maxi',
     price: '3,490.00',
-    art: 'maxi',
-    pose: 'front',
-    scene: 'studio',
-    palette: {
-      sceneBase: '#efe5d8',
-      sceneAccent: '#ead6c6',
-      floorTone: '#e7d8ca',
-      garmentPrimary: '#f6f4ef',
-      garmentSecondary: '#ddd5ca',
-      accentTone: '#ffffff',
-      skinTone: '#c68f70',
-      hairTone: '#5b382b',
-    },
   },
   {
     name: 'Noa Stripe Dress',
     price: '3,448.00',
     soldOut: true,
-    art: 'mini',
-    pose: 'front',
-    scene: 'studio',
-    pattern: 'stripe',
-    palette: {
-      sceneBase: '#eee0d0',
-      sceneAccent: '#e7d2bc',
-      floorTone: '#e2cdb8',
-      garmentPrimary: '#efe2cc',
-      garmentSecondary: '#cfa06f',
-      accentTone: '#ffffff',
-      skinTone: '#d09b75',
-      hairTone: '#664333',
-    },
   },
   {
     name: 'Mili Garden Dress',
     price: '2,200.00',
     soldOut: true,
-    art: 'mini',
-    pose: 'hands',
-    scene: 'studio',
-    pattern: 'floral',
-    palette: {
-      sceneBase: '#efe2d4',
-      sceneAccent: '#ead5bf',
-      floorTone: '#e5d1bf',
-      garmentPrimary: '#f6d9dd',
-      garmentSecondary: '#de8ba8',
-      accentTone: '#f8f1bf',
-      skinTone: '#d09a73',
-      hairTone: '#654432',
-    },
   },
   {
     name: 'Pleated Candy Dress',
     price: '3,490.00',
     rating: 5,
     reviews: 1,
-    art: 'mini',
-    pose: 'walk',
-    scene: 'studio',
-    palette: {
-      sceneBase: '#f5e7dc',
-      sceneAccent: '#efd6cb',
-      floorTone: '#ead2c0',
-      garmentPrimary: '#f3c0df',
-      garmentSecondary: '#d57eb2',
-      accentTone: '#ffdceb',
-      skinTone: '#d49d79',
-      hairTone: '#57362c',
-    },
   },
   {
     name: 'Midnight Lane Gown',
     price: '3,500.00',
-    art: 'maxi',
-    pose: 'walk',
-    scene: 'night',
-    hasBag: true,
-    palette: {
-      sceneBase: '#1f1d2b',
-      sceneAccent: '#f1ad68',
-      floorTone: '#4d3d4f',
-      garmentPrimary: '#141414',
-      garmentSecondary: '#050505',
-      accentTone: '#3ee3ae',
-      skinTone: '#d09c79',
-      hairTone: '#2c1c18',
-    },
   },
   {
     name: 'Go Denim Co ord',
@@ -274,304 +167,195 @@ const products = [
     rating: 5,
     reviews: 4,
     soldOut: true,
-    art: 'coord',
-    pose: 'front',
-    scene: 'plain',
-    palette: {
-      sceneBase: '#f3efe9',
-      sceneAccent: '#ece8e4',
-      floorTone: '#e6dfd7',
-      garmentPrimary: '#416a9d',
-      garmentSecondary: '#24486f',
-      accentTone: '#7bb4ff',
-      skinTone: '#d29d79',
-      hairTone: '#422b25',
-    },
+    asSeenOn: true,
   },
   {
     name: 'Embroidered Noir',
     price: '1,600.00',
     rating: 5,
     reviews: 6,
-    art: 'maxi',
-    pose: 'front',
-    scene: 'plain',
     asSeenOn: true,
-    palette: {
-      sceneBase: '#efeff2',
-      sceneAccent: '#e6e6ec',
-      floorTone: '#dfdfe6',
-      garmentPrimary: '#171717',
-      garmentSecondary: '#050505',
-      accentTone: '#bfa16a',
-      skinTone: '#d1a082',
-      hairTone: '#3b2a27',
-    },
   },
   {
     name: 'Rose Wonder Dress',
     price: '1,600.00',
-    art: 'maxi',
-    pose: 'front',
-    scene: 'plain',
     asSeenOn: true,
-    palette: {
-      sceneBase: '#efeff3',
-      sceneAccent: '#e7e7ec',
-      floorTone: '#e1dfea',
-      garmentPrimary: '#ef5f9a',
-      garmentSecondary: '#c9336d',
-      accentTone: '#f6c1d7',
-      skinTone: '#d19f7f',
-      hairTone: '#3f2826',
-    },
   },
   {
     name: 'Meher Print Dress',
     price: '1,650.00',
     rating: 5,
     reviews: 1,
-    art: 'maxi',
-    pose: 'front',
-    scene: 'plain',
-    pattern: 'print',
-    palette: {
-      sceneBase: '#efeff2',
-      sceneAccent: '#e9e8ef',
-      floorTone: '#e1dfe7',
-      garmentPrimary: '#3d3434',
-      garmentSecondary: '#9e513c',
-      accentTone: '#ed8f42',
-      skinTone: '#cd9878',
-      hairTone: '#3c2824',
-    },
   },
   {
     name: 'Scarlet Sindoor',
     price: '1,850.00',
     rating: 5,
     reviews: 4,
-    art: 'maxi',
-    pose: 'front',
-    scene: 'plain',
     asSeenOn: true,
-    palette: {
-      sceneBase: '#f1f0f4',
-      sceneAccent: '#e8e6ee',
-      floorTone: '#dedce6',
-      garmentPrimary: '#e94a44',
-      garmentSecondary: '#b72a26',
-      accentTone: '#ffb6a7',
-      skinTone: '#c99577',
-      hairTone: '#402825',
-    },
   },
   {
     name: 'Fuchsia V Neck Co ord',
     price: '1,232.00',
     oldPrice: '1,450.00',
     soldOut: true,
-    art: 'coord',
-    pose: 'hands',
-    scene: 'plain',
-    palette: {
-      sceneBase: '#efeff3',
-      sceneAccent: '#e8e8ee',
-      floorTone: '#dfdfe7',
-      garmentPrimary: '#f11b86',
-      garmentSecondary: '#ca116b',
-      accentTone: '#ff83be',
-      skinTone: '#d09b79',
-      hairTone: '#402827',
-    },
   },
   {
     name: 'Royal Blue Edit',
     price: '1,899.00',
     rating: 5,
     reviews: 6,
-    art: 'maxi',
-    pose: 'front',
-    scene: 'plain',
     asSeenOn: true,
-    palette: {
-      sceneBase: '#f1eff4',
-      sceneAccent: '#e8e6ec',
-      floorTone: '#dedce4',
-      garmentPrimary: '#3066b8',
-      garmentSecondary: '#1a4790',
-      accentTone: '#b9d3ff',
-      skinTone: '#cc987a',
-      hairTone: '#372725',
-    },
   },
   {
     name: 'Little Heart Jeans',
     price: '2,500.00',
-    art: 'denim',
-    scene: 'plain',
     asSeenOn: true,
-    palette: {
-      sceneBase: '#ececf2',
-      sceneAccent: '#e3e3ec',
-      floorTone: '#dadae4',
-      garmentPrimary: '#9eb4ce',
-      garmentSecondary: '#7694b8',
-      accentTone: '#ead6c5',
-      skinTone: '#c99773',
-      hairTone: '#372826',
-    },
   },
   {
     name: 'Lifafa Denim Vest',
     price: '1,800.00',
     rating: 5,
     reviews: 4,
-    art: 'vest',
-    pose: 'front',
-    scene: 'plain',
     asSeenOn: true,
-    palette: {
-      sceneBase: '#f0f0f4',
-      sceneAccent: '#e8e8ef',
-      floorTone: '#e0dfe7',
-      garmentPrimary: '#ece4d8',
-      garmentSecondary: '#88a6cf',
-      accentTone: '#f4f2ee',
-      skinTone: '#cc9a78',
-      hairTone: '#3a2726',
-    },
   },
   {
     name: 'Lara Cutwork Denim',
     price: '2,300.00',
     soldOut: true,
-    art: 'denim',
-    scene: 'plain',
     asSeenOn: true,
-    palette: {
-      sceneBase: '#ededf2',
-      sceneAccent: '#e4e5eb',
-      floorTone: '#dcdce4',
-      garmentPrimary: '#8dadce',
-      garmentSecondary: '#6f8cb0',
-      accentTone: '#b07d54',
-      skinTone: '#cd9874',
-      hairTone: '#372927',
-    },
   },
   {
     name: 'Cocoa Twist Set',
     price: '2,099.00',
-    art: 'coord',
-    pose: 'hands',
-    scene: 'plain',
-    palette: {
-      sceneBase: '#efeff2',
-      sceneAccent: '#e7e7ed',
-      floorTone: '#dddddf',
-      garmentPrimary: '#6a412f',
-      garmentSecondary: '#3a231a',
-      accentTone: '#9d6a54',
-      skinTone: '#d5a181',
-      hairTone: '#30201b',
-    },
   },
   {
     name: 'Rosey Gingham Maxi',
     price: '1,995.00',
     soldOut: true,
-    art: 'maxi',
-    pose: 'front',
-    scene: 'plain',
-    pattern: 'check',
-    palette: {
-      sceneBase: '#f0eff2',
-      sceneAccent: '#e8e7ed',
-      floorTone: '#dfe0e5',
-      garmentPrimary: '#f8dbe2',
-      garmentSecondary: '#e2b8c0',
-      accentTone: '#fff4f7',
-      skinTone: '#cf9c79',
-      hairTone: '#3b2725',
-    },
   },
   {
     name: 'Young White Rich Shirt',
     price: '5,145.00',
-    art: 'skirtset',
-    pose: 'front',
-    scene: 'studio',
-    palette: {
-      sceneBase: '#eee0d1',
-      sceneAccent: '#ead3bd',
-      floorTone: '#e0cdb7',
-      garmentPrimary: '#f8f6f2',
-      garmentSecondary: '#bb9465',
-      accentTone: '#e7c492',
-      skinTone: '#d09b75',
-      hairTone: '#5b3c30',
-    },
-  },
-  {
-    name: 'Florida Column Dress',
-    price: '2,998.00',
-    art: 'maxi',
-    pose: 'front',
-    scene: 'studio',
-    palette: {
-      sceneBase: '#efe1d3',
-      sceneAccent: '#e7d1bd',
-      floorTone: '#dfccb8',
-      garmentPrimary: '#f1eadb',
-      garmentSecondary: '#d6b27d',
-      accentTone: '#ffecbe',
-      skinTone: '#cf9c77',
-      hairTone: '#54372d',
-    },
-  },
-  {
-    name: 'House Of Pop Art',
-    price: '2,345.00',
-    art: 'shift',
-    pose: 'front',
-    scene: 'studio',
-    pattern: 'abstract',
-    palette: {
-      sceneBase: '#efdfd0',
-      sceneAccent: '#ead1bb',
-      floorTone: '#e1c9b4',
-      garmentPrimary: '#f6e3ca',
-      garmentSecondary: '#f08d55',
-      accentTone: '#2d353f',
-      skinTone: '#d19c75',
-      hairTone: '#58382d',
-    },
-  },
-  {
-    name: 'Old Money Set',
-    price: '1,449.00',
-    soldOut: true,
-    art: 'coord',
-    pose: 'front',
-    scene: 'plain',
-    palette: {
-      sceneBase: '#efeff3',
-      sceneAccent: '#e7e7ee',
-      floorTone: '#dddddf',
-      garmentPrimary: '#ec5c15',
-      garmentSecondary: '#c84a0c',
-      accentTone: '#ff9a5c',
-      skinTone: '#ce9877',
-      hairTone: '#372724',
-    },
   },
 ]
-  .slice(0, productImages.length)
-  .map((product, index) => ({
-  ...product,
-  image: productImages[index % productImages.length],
-}))
+
+const productCategories = [
+  'Dress',
+  'Shirt',
+  'Dress',
+  'Top',
+  'Dress',
+  'Dress',
+  'Dress',
+  'Dress',
+  'Co ord set',
+  'Dress',
+  'Dress',
+  'Dress',
+  'Dress',
+  'Co ord set',
+  'Dress',
+  'Pants',
+  'Top',
+  'Pants',
+  'Co ord set',
+  'Dress',
+  'Shirt',
+]
+
+const productColorSets = [
+  ['Baby Pink', 'Champagne', 'Pearl White'],
+  ['Lilac', 'Black', 'Rose Gold'],
+  ['Cream', 'Gold', 'Blush'],
+  ['Mocha Dot', 'Dusty Rose', 'Sand'],
+  ['Violet', 'Silver', 'Rosewood'],
+  ['Sunflower', 'Moss', 'Ivory'],
+  ['Ruby', 'Wine', 'Soft Gold'],
+  ['Nude Gold', 'Silver Mist', 'Black'],
+  ['Scarlet', 'Classic Red', 'Ruby Glow'],
+  ['Mono Noir', 'Charcoal', 'Pearl'],
+  ['Blue Floral', 'Cloud White', 'Dusty Blue'],
+  ['Blush Princess', 'Powder Pink', 'Silver'],
+  ['Lavender Garden', 'Mauve', 'Lilac Bloom'],
+  ['Pink Bloom', 'Berry Rose', 'Soft Coral'],
+  ['Black', 'Midnight', 'Olive Sand'],
+  ['Ivory White', 'Champagne', 'Vanilla'],
+  ['Ivory Lace', 'Bridal White', 'Silver'],
+  ['Pearl White', 'Cream', 'Sage'],
+  ['Storm Grey', 'Slate', 'Black'],
+  ['Paisley Pink', 'Orchid', 'Mint'],
+  ['Rose Nude', 'Mocha Pink', 'Champagne'],
+]
+
+const productSizeSets = [
+  ['XS', 'S', 'M', 'L'],
+  ['S', 'M', 'L', 'XL'],
+  ['M', 'L', 'XL', 'XXL'],
+]
+
+const products = baseProducts.map((product, index) => {
+  const gallery = Array.from({ length: 4 }, (_, offset) => {
+    return productImages[(index + offset) % productImages.length]
+  })
+  const sizeLabels = productSizeSets[index % productSizeSets.length]
+  const sizes = sizeLabels.map((label, sizeIndex) => ({
+    label,
+    available: product.soldOut ? false : !(sizeIndex === 0 && index % 4 === 0),
+  }))
+  const colors = productColorSets[index % productColorSets.length]
+  const category = productCategories[index % productCategories.length]
+  const availableSizeLabels = sizes
+    .filter((size) => size.available)
+    .map((size) => size.label)
+    .join(', ')
+
+  return {
+    ...product,
+    id: `aryass-product-${index + 1}`,
+    image: gallery[0],
+    gallery,
+    category,
+    colors,
+    sizes,
+    sku: `ARY-${String(index + 1).padStart(3, '0')}-${category.slice(0, 2).toUpperCase()}`,
+    stockCount: product.soldOut ? 0 : 4 + (index % 7),
+    shippingNote:
+      index % 2 === 0
+        ? 'Shipping calculated at checkout'
+        : 'Free shipping above Rs. 1,999',
+    label: index % 3 === 0 ? 'Aryass Edit' : 'New Arrival',
+    description: [
+      `${product.name} modern festive dressing aur elevated daily styling ke beech ka balance create karta hai. Fluid silhouette aur polished finish is look ko day events se dinner plans tak easy banati hai.`,
+      `Soft handfeel, graceful drape aur refined detailing ke saath yeh piece wardrobe me instantly premium feel add karta hai. Lightweight structure ki wajah se long wear ke liye bhi comfortable rehta hai.`,
+    ],
+    styleNotes: [
+      `Perfect for ${category.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`,
+      `Best styled with minimal gold accessories, sleek heels, and a structured bag.`,
+      `Sizes available: ${availableSizeLabels || sizeLabels.join(', ')}.`,
+    ],
+    deliveryMeta: [
+      { icon: 'shipping', title: 'Estimated delivery', text: '2-6 business days' },
+      { icon: 'return', title: 'Easy returns', text: 'Within 7 days of delivery' },
+      { icon: 'lock', title: 'Secure payment', text: '100% safe checkout flow' },
+    ],
+    storyTitle: `${product.name} for polished moments`,
+    storyText:
+      'Aryass pieces are designed to move from intimate celebrations to elevated city looks without losing their soft, graceful appeal.',
+  }
+})
+
+function formatPrice(price) {
+  return `Rs. ${price}`
+}
+
+function maskPhoneNumber(phoneNumber) {
+  if (phoneNumber.length < 4) {
+    return `+91 ${phoneNumber}`
+  }
+
+  return `+91 ${phoneNumber.slice(0, 2)}******${phoneNumber.slice(-2)}`
+}
 
 function Icon({ name }) {
   const icons = {
@@ -583,6 +367,14 @@ function Icon({ name }) {
     ),
     bag: <path d="M7 8V7a5 5 0 0 1 10 0v1M5 8h14l-1 11H6L5 8Z" />,
     chevron: <path d="m9 6 6 6-6 6" />,
+    left: <path d="m14.5 6.5-5 5.5 5 5.5" />,
+    right: <path d="m9.5 6.5 5 5.5-5 5.5" />,
+    shipping: (
+      <path d="M3 8h10v8H3V8Zm10 2h3l2 2v4h-5v-6Zm-7 8h7M17 18h1M6 18a1.5 1.5 0 1 0 0 .01ZM17 18a1.5 1.5 0 1 0 0 .01Z" />
+    ),
+    return: <path d="M8 8H4v4M4.5 11.5A7.5 7.5 0 1 0 7 6.2M16 16h4v-4M19.5 12.5A7.5 7.5 0 0 0 17 17.8" />,
+    lock: <path d="M7 11V8.8A5 5 0 0 1 17 8.8V11M6 11h12v8H6v-8Zm6 3v2.8" />,
+    check: <path d="m5.5 12 4 4 9-9" />,
     facebook: (
       <path
         d="M13.5 8H15V5.5h-1.9c-2.3 0-3.6 1.3-3.6 3.7V11H8v2.4h1.5V19H12v-5.6h2l.4-2.4h-2.4V9.5c0-.9.3-1.5 1.5-1.5Z"
@@ -607,8 +399,6 @@ function Icon({ name }) {
         <path d="m10.5 14.5 4-2.5-4-2.5Z" fill="currentColor" stroke="none" />
       </>
     ),
-    left: <path d="m14.5 6.5-5 5.5 5 5.5" />,
-    right: <path d="m9.5 6.5 5 5.5-5 5.5" />,
   }
 
   return (
@@ -618,20 +408,27 @@ function Icon({ name }) {
   )
 }
 
-function ProductArtwork({ product }) {
+function ProductArtwork({ product, onOpen }) {
   return (
-    <div className="product-art">
-      {product.soldOut ? <span className="product-badge">Sold out</span> : null}
-      {product.asSeenOn ? <span className="product-stamp">as seen on</span> : null}
-      <img className="product-image" src={product.image} alt={product.name} loading="lazy" />
-    </div>
+    <button
+      type="button"
+      className="product-art-button"
+      aria-label={`Open ${product.name}`}
+      onClick={() => onOpen(product)}
+    >
+      <div className="product-art">
+        {product.soldOut ? <span className="product-badge">Sold out</span> : null}
+        {product.asSeenOn ? <span className="product-stamp">as seen on</span> : null}
+        <img className="product-image" src={product.image} alt={product.name} loading="lazy" />
+      </div>
+    </button>
   )
 }
 
-function ProductCard({ product }) {
+function ProductCard({ product, onChooseOption }) {
   return (
     <article className="product-card">
-      <ProductArtwork product={product} />
+      <ProductArtwork product={product} onOpen={onChooseOption} />
 
       <div className="product-copy">
         <h3>{product.name}</h3>
@@ -640,17 +437,366 @@ function ProductCard({ product }) {
             {'\u2605'.repeat(product.rating)}
             <span>({product.reviews})</span>
           </p>
-        ) : null}
+        ) : (
+          <div className="rating-row rating-row--spacer" aria-hidden="true" />
+        )}
         <p className="price-row">
-          {product.oldPrice ? <span className="old-price">Rs. {product.oldPrice}</span> : null}
-          <span>Rs. {product.price}</span>
+          {product.oldPrice ? <span className="old-price">{formatPrice(product.oldPrice)}</span> : null}
+          <span>{formatPrice(product.price)}</span>
         </p>
       </div>
 
-      <button type="button" className="option-button">
+      <button type="button" className="option-button" onClick={() => onChooseOption(product)}>
         Choose options
       </button>
     </article>
+  )
+}
+
+function LoginModal({
+  isOpen,
+  onClose,
+  loginStep,
+  phoneNumber,
+  otpDigits,
+  loginError,
+  loginMessage,
+  onPhoneChange,
+  onPhoneSubmit,
+  onVerifyOtp,
+  onOtpChange,
+  onOtpKeyDown,
+  onResendOtp,
+  otpInputRefs,
+}) {
+  if (!isOpen) {
+    return null
+  }
+
+  return (
+    <div className="login-modal-backdrop" onClick={onClose} aria-hidden={!isOpen}>
+      <div
+        className="login-modal-shell"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Login with OTP"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button type="button" className="login-close-button" aria-label="Close login" onClick={onClose}>
+          <Icon name="close" />
+        </button>
+
+        <div className="login-modal-card">
+          <div className="login-modal-brand">
+            <span className="brand-word">ARYASS</span>
+            <span className="brand-tagline">FEEL BEFORE THE MOMENT</span>
+          </div>
+
+          {loginStep === 'phone' ? (
+            <form className="login-form" onSubmit={onPhoneSubmit}>
+              <p className="login-step-kicker">Enter your mobile number</p>
+              <div className="phone-field">
+                <span className="phone-prefix">
+                  <span className="country-flag" />
+                  +91
+                </span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
+                  value={phoneNumber}
+                  onChange={(event) => onPhoneChange(event.target.value)}
+                  placeholder="Enter 10 digit number"
+                  aria-label="Mobile number"
+                />
+              </div>
+
+              <p className="login-helper-text">
+                Submit karte hi OTP step open hoga. Demo flow ke liye code screen par show hoga.
+              </p>
+
+              {loginError ? <p className="login-error">{loginError}</p> : null}
+
+              <button type="submit" className="login-submit-button">
+                Submit
+              </button>
+            </form>
+          ) : (
+            <form className="login-form" onSubmit={onVerifyOtp}>
+              <p className="login-step-kicker">Enter OTP below</p>
+              <div className="otp-input-row">
+                {otpDigits.map((digit, index) => (
+                  <input
+                    key={`otp-${index}`}
+                    ref={(element) => {
+                      otpInputRefs.current[index] = element
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(event) => onOtpChange(index, event.target.value)}
+                    onKeyDown={(event) => onOtpKeyDown(event, index)}
+                    aria-label={`OTP digit ${index + 1}`}
+                  />
+                ))}
+              </div>
+
+              <p className="login-helper-text">{loginMessage}</p>
+
+              <button type="button" className="otp-resend-button" onClick={onResendOtp}>
+                Resend OTP
+              </button>
+
+              {loginError ? <p className="login-error">{loginError}</p> : null}
+
+              <button type="submit" className="login-submit-button">
+                Verify
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProductDetailPage({
+  product,
+  selectedImage,
+  selectedColor,
+  selectedSize,
+  quantity,
+  onBack,
+  onSelectImage,
+  onSelectColor,
+  onSelectSize,
+  onChangeQuantity,
+  onChooseOption,
+  relatedProducts,
+}) {
+  return (
+    <main className="detail-page">
+      <section className="detail-breadcrumb-row">
+        <button type="button" className="back-button" onClick={onBack}>
+          <Icon name="left" />
+          Back to collection
+        </button>
+        <p>
+          Aryass / {product.category} / <span>{product.name}</span>
+        </p>
+      </section>
+
+      <section className="detail-layout">
+        <div className="detail-gallery">
+          <div className="detail-main-media">
+            {product.soldOut ? <span className="detail-main-badge">Sold out</span> : null}
+            <img src={selectedImage} alt={product.name} />
+          </div>
+
+          <div className="detail-thumb-row">
+            {product.gallery.map((image, index) => (
+              <button
+                key={`${product.id}-thumb-${index}`}
+                type="button"
+                className={`detail-thumb-button ${selectedImage === image ? 'is-active' : ''}`}
+                aria-label={`Show image ${index + 1} for ${product.name}`}
+                onClick={() => onSelectImage(image)}
+              >
+                <img src={image} alt={`${product.name} view ${index + 1}`} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="detail-summary">
+          <p className="detail-label">{product.label}</p>
+          <h1>{product.name}</h1>
+
+          {product.rating ? (
+            <p className="detail-rating">
+              {'\u2605'.repeat(product.rating)}
+              <span>{product.reviews} reviews</span>
+            </p>
+          ) : (
+            <p className="detail-rating detail-rating--muted">No reviews yet</p>
+          )}
+
+          <p className="detail-price">
+            {product.oldPrice ? <span className="old-price">{formatPrice(product.oldPrice)}</span> : null}
+            <strong>{formatPrice(product.price)}</strong>
+          </p>
+          <p className="detail-shipping-note">{product.shippingNote}</p>
+
+          <div className="detail-option-group">
+            <div className="detail-option-head">
+              <span>Color</span>
+              <strong>{selectedColor}</strong>
+            </div>
+            <div className="detail-chip-row">
+              {product.colors.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`detail-chip ${selectedColor === color ? 'is-active' : ''}`}
+                  onClick={() => onSelectColor(color)}
+                >
+                  {color}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="detail-option-group">
+            <div className="detail-option-head">
+              <span>Size</span>
+              <strong>{selectedSize}</strong>
+            </div>
+            <div className="detail-chip-row detail-chip-row--sizes">
+              {product.sizes.map((size) => (
+                <button
+                  key={size.label}
+                  type="button"
+                  className={`detail-chip detail-chip--size ${
+                    selectedSize === size.label ? 'is-active' : ''
+                  }`}
+                  onClick={() => onSelectSize(size.label)}
+                  disabled={!size.available}
+                >
+                  {size.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="detail-sku">{product.sku}</p>
+          <p className={`detail-stock ${product.soldOut ? 'is-soldout' : ''}`}>
+            <Icon name="check" />
+            {product.soldOut
+              ? 'Currently sold out. Join upcoming restock edit.'
+              : `${product.stockCount} pieces in stock`}
+          </p>
+
+          <div className="detail-buy-row">
+            <div className="quantity-selector" aria-label="Quantity selector">
+              <button
+                type="button"
+                aria-label="Decrease quantity"
+                onClick={() => onChangeQuantity(-1)}
+                disabled={quantity === 1 || product.soldOut}
+              >
+                -
+              </button>
+              <span>{quantity}</span>
+              <button
+                type="button"
+                aria-label="Increase quantity"
+                onClick={() => onChangeQuantity(1)}
+                disabled={product.soldOut}
+              >
+                +
+              </button>
+            </div>
+
+            <button type="button" className="size-chart-button">
+              Size chart
+            </button>
+          </div>
+
+          <div className="detail-action-stack">
+            <button type="button" className="primary-action-button" disabled={product.soldOut}>
+              {product.soldOut ? 'Notify me' : 'Add to cart'}
+            </button>
+            <button type="button" className="secondary-action-button" disabled={product.soldOut}>
+              Buy it now
+            </button>
+          </div>
+
+          <div className="detail-benefit-grid">
+            {product.deliveryMeta.map((item) => (
+              <div key={item.title} className="detail-benefit-card">
+                <Icon name={item.icon} />
+                <strong>{item.title}</strong>
+                <span>{item.text}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="detail-copy-block">
+            <h2>{product.storyTitle}</h2>
+            {product.description.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+
+            <div className="detail-style-notes">
+              {product.styleNotes.map((note) => (
+                <p key={note}>{note}</p>
+              ))}
+            </div>
+          </div>
+
+          <div className="detail-accordion">
+            <details open>
+              <summary>Shipping and Delivery</summary>
+              <p>Metro cities me 2-4 working days aur other locations me 4-6 working days.</p>
+            </details>
+            <details>
+              <summary>Return and Exchange</summary>
+              <p>Eligible pieces par easy exchange support available hai within 7 days of delivery.</p>
+            </details>
+            <details>
+              <summary>Fabric and Care</summary>
+              <p>Gentle steam, light hand care aur padded hanger storage se finish longer fresh rahegi.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section className="detail-reviews-section">
+        <div className="detail-section-head">
+          <p className="collection-label">Customer Reviews</p>
+          <h2>People are saving this look for their next occasion.</h2>
+        </div>
+        <div className="review-card">
+          <p className="review-empty">There are no reviews yet. Be the first to review this style.</p>
+          <button type="button" className="review-button">
+            Write a review
+          </button>
+        </div>
+      </section>
+
+      <section className="detail-related-section">
+        <div className="detail-section-head">
+          <p className="collection-label">You may also like</p>
+          <h2>More Aryass picks around this mood</h2>
+        </div>
+
+        <div className="product-grid product-grid--related">
+          {relatedProducts.map((relatedProduct) => (
+            <ProductCard
+              key={relatedProduct.id}
+              product={relatedProduct}
+              onChooseOption={onChooseOption}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="story-feature-card">
+        <div className="story-feature-media">
+          <img src={product.gallery[1]} alt={`${product.name} editorial look`} />
+        </div>
+        <div className="story-feature-copy">
+          <p className="collection-label">Our Story</p>
+          <h2>{product.storyTitle}</h2>
+          <p>{product.storyText}</p>
+          <button type="button" className="story-read-button" onClick={onBack}>
+            Continue shopping
+          </button>
+        </div>
+      </section>
+    </main>
   )
 }
 
@@ -658,6 +804,28 @@ function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeMessage, setActiveMessage] = useState(0)
   const [activeOffer, setActiveOffer] = useState(0)
+  const [isLoginOpen, setIsLoginOpen] = useState(false)
+  const [loginStep, setLoginStep] = useState('phone')
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [otpDigits, setOtpDigits] = useState(['', '', '', ''])
+  const [generatedOtp, setGeneratedOtp] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [loginMessage, setLoginMessage] = useState(
+    'Enter your mobile number to continue with secure sign in.',
+  )
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [accountPhone, setAccountPhone] = useState('')
+  const [selectedProductId, setSelectedProductId] = useState(null)
+  const [selectedImage, setSelectedImage] = useState('')
+  const [selectedColor, setSelectedColor] = useState('')
+  const [selectedSize, setSelectedSize] = useState('')
+  const [quantity, setQuantity] = useState(1)
+  const otpInputRefs = useRef([])
+
+  const selectedProduct = products.find((product) => product.id === selectedProductId) || null
+  const relatedProducts = selectedProduct
+    ? products.filter((product) => product.id !== selectedProduct.id).slice(0, 4)
+    : []
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -683,6 +851,7 @@ function App() {
     const handleEscape = (event) => {
       if (event.key === 'Escape') {
         setIsMenuOpen(false)
+        setIsLoginOpen(false)
       }
     }
 
@@ -695,14 +864,133 @@ function App() {
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = isMenuOpen ? 'hidden' : ''
+    document.body.style.overflow = isMenuOpen || isLoginOpen ? 'hidden' : ''
 
     return () => {
       document.body.style.overflow = previousOverflow
     }
-  }, [isMenuOpen])
+  }, [isLoginOpen, isMenuOpen])
 
   const currentMessage = announcementMessages[activeMessage]
+
+  const openLoginModal = () => {
+    setLoginStep('phone')
+    setPhoneNumber('')
+    setOtpDigits(['', '', '', ''])
+    setGeneratedOtp('')
+    setLoginError('')
+    setLoginMessage(
+      isLoggedIn
+        ? `Signed in as ${accountPhone}. Enter another number if you want to switch account.`
+        : 'Enter your mobile number to continue with secure sign in.',
+    )
+
+    setIsMenuOpen(false)
+    setIsLoginOpen(true)
+  }
+
+  const closeLoginModal = () => {
+    setIsLoginOpen(false)
+    setLoginError('')
+  }
+
+  const openProduct = (product) => {
+    const defaultSize =
+      product.sizes.find((size) => size.available)?.label || product.sizes[0].label
+
+    setSelectedProductId(product.id)
+    setSelectedImage(product.gallery[0])
+    setSelectedColor(product.colors[0])
+    setSelectedSize(defaultSize)
+    setQuantity(1)
+    setIsMenuOpen(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const closeProduct = () => {
+    setSelectedProductId(null)
+  }
+
+  const handlePhoneSubmit = (event) => {
+    event.preventDefault()
+
+    const cleanedNumber = phoneNumber.replace(/\D/g, '').slice(0, 10)
+
+    if (cleanedNumber.length !== 10) {
+      setLoginError('Please enter a valid 10 digit mobile number.')
+      return
+    }
+
+    const nextOtp = String(1000 + Math.floor(Math.random() * 9000))
+    setGeneratedOtp(nextOtp)
+    setPhoneNumber(cleanedNumber)
+    setOtpDigits(['', '', '', ''])
+    setLoginStep('otp')
+    setLoginError('')
+    setLoginMessage(`OTP sent to ${maskPhoneNumber(cleanedNumber)}. Demo OTP: ${nextOtp}`)
+
+    window.setTimeout(() => {
+      otpInputRefs.current[0]?.focus()
+    }, 40)
+  }
+
+  const handleOtpChange = (index, value) => {
+    const numericValue = value.replace(/\D/g, '').slice(-1)
+    const nextOtpDigits = [...otpDigits]
+    nextOtpDigits[index] = numericValue
+    setOtpDigits(nextOtpDigits)
+    setLoginError('')
+
+    if (numericValue && index < otpInputRefs.current.length - 1) {
+      otpInputRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleOtpKeyDown = (event, index) => {
+    if (event.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handleResendOtp = () => {
+    if (phoneNumber.length !== 10) {
+      setLoginError('Please go back and enter your number again.')
+      return
+    }
+
+    const nextOtp = String(1000 + Math.floor(Math.random() * 9000))
+    setGeneratedOtp(nextOtp)
+    setOtpDigits(['', '', '', ''])
+    setLoginError('')
+    setLoginMessage(`Fresh OTP sent to ${maskPhoneNumber(phoneNumber)}. Demo OTP: ${nextOtp}`)
+
+    window.setTimeout(() => {
+      otpInputRefs.current[0]?.focus()
+    }, 40)
+  }
+
+  const handleVerifyOtp = (event) => {
+    event.preventDefault()
+
+    if (otpDigits.join('') !== generatedOtp) {
+      setLoginError('OTP does not match. Please try again or resend OTP.')
+      return
+    }
+
+    setIsLoggedIn(true)
+    setAccountPhone(maskPhoneNumber(phoneNumber))
+    setLoginError('')
+    setIsLoginOpen(false)
+  }
+
+  const handleMenuLinkClick = () => {
+    setSelectedProductId(null)
+    setIsMenuOpen(false)
+  }
+
+  const handleQuantityChange = (change) => {
+    setQuantity((current) => Math.max(1, current + change))
+  }
 
   return (
     <div className="page-shell" id="top">
@@ -759,22 +1047,28 @@ function App() {
           </button>
         </div>
 
-        <a className="brand-mark" href="#top" aria-label="Aryass home">
+        <a
+          className="brand-mark"
+          href="#top"
+          aria-label="Aryass home"
+          onClick={() => setSelectedProductId(null)}
+        >
           <span className="brand-word">ARYASS</span>
           <span className="brand-tagline">FEEL BEFORE THE MOMENT</span>
         </a>
 
         <div className="header-side header-side--right">
-          <a className="header-login" href="#login">
-            Login
-          </a>
-          <button type="button" className="header-icon" aria-label="Account">
+          <button type="button" className="header-login" onClick={openLoginModal}>
+            {isLoggedIn ? 'My Account' : 'Login'}
+          </button>
+          <button type="button" className="header-icon" aria-label="Account" onClick={openLoginModal}>
             <Icon name="account" />
           </button>
           <button
             type="button"
             className="header-icon header-icon--cart"
             aria-label="Shopping bag"
+            onClick={selectedProduct ? () => setSelectedProductId(selectedProduct.id) : undefined}
           >
             <Icon name="bag" />
           </button>
@@ -809,130 +1103,154 @@ function App() {
 
         <nav className="drawer-links">
           {mobileMenuItems.map((item) => (
-            <a key={item} href="#collection" onClick={() => setIsMenuOpen(false)}>
+            <a key={item} href="#collection" onClick={handleMenuLinkClick}>
               {item}
             </a>
           ))}
         </nav>
 
-        <a className="drawer-login" href="#login" onClick={() => setIsMenuOpen(false)}>
-          Login / Account
-        </a>
+        <button type="button" className="drawer-login" onClick={openLoginModal}>
+          {isLoggedIn ? 'My Account' : 'Login / Account'}
+        </button>
       </aside>
 
-      <main className="collection-page" id="collection">
-        <section className="offer-slider-section" aria-label="Offers">
-          <div className="offer-slider-copy">
-            <p className="collection-label">Featured Offers</p>
-            <h2>Shop offers that slide automatically</h2>
-            <p className="collection-text">
-              First order par 10% off hero offer ke saath aur bhi cart deals rotate hongi,
-              taki homepage par savings instantly visible rahein.
-            </p>
-          </div>
+      {selectedProduct ? (
+        <ProductDetailPage
+          product={selectedProduct}
+          selectedImage={selectedImage}
+          selectedColor={selectedColor}
+          selectedSize={selectedSize}
+          quantity={quantity}
+          onBack={closeProduct}
+          onSelectImage={setSelectedImage}
+          onSelectColor={setSelectedColor}
+          onSelectSize={setSelectedSize}
+          onChangeQuantity={handleQuantityChange}
+          onChooseOption={openProduct}
+          relatedProducts={relatedProducts}
+        />
+      ) : (
+        <main className="collection-page" id="collection">
+          <section className="offer-slider-section" aria-label="Offers">
+            <div className="offer-slider-copy">
+              <p className="collection-label">Featured Offers</p>
+              <h2>Shop offers that slide automatically</h2>
+              <p className="collection-text">
+                First order par 10% off hero offer ke saath aur bhi cart deals rotate hongi,
+                taki homepage par savings instantly visible rahein.
+              </p>
+            </div>
 
-          <div className="offer-slider-frame">
-            <div
-              className="offer-slider-track"
-              style={{ transform: `translateX(-${activeOffer * 100}%)` }}
-            >
-              {offerSlides.map((offer) => (
-                <article key={offer.id} className="offer-slide-card">
-                  <div className="offer-slide-content">
-                    <span className="offer-pill">{offer.label}</span>
-                    <h3>{offer.title}</h3>
-                    <p>{offer.description}</p>
-                    <div className="offer-code-row">
-                      <span>Use code</span>
-                      <strong>{offer.code}</strong>
-                    </div>
-                  </div>
-
-                  <div className="offer-stats-grid">
-                    {offer.stats.map((stat) => (
-                      <div key={stat.label} className="offer-stat-card">
-                        <strong>{stat.value}</strong>
-                        <span>{stat.label}</span>
+            <div className="offer-slider-frame">
+              <div
+                className="offer-slider-track"
+                style={{ transform: `translateX(-${activeOffer * 100}%)` }}
+              >
+                {offerSlides.map((offer) => (
+                  <article key={offer.id} className="offer-slide-card">
+                    <div className="offer-slide-content">
+                      <span className="offer-pill">{offer.label}</span>
+                      <h3>{offer.title}</h3>
+                      <p>{offer.description}</p>
+                      <div className="offer-code-row">
+                        <span>Use code</span>
+                        <strong>{offer.code}</strong>
                       </div>
-                    ))}
-                  </div>
-                </article>
+                    </div>
+
+                    <div className="offer-stats-grid">
+                      {offer.stats.map((stat) => (
+                        <div key={stat.label} className="offer-stat-card">
+                          <strong>{stat.value}</strong>
+                          <span>{stat.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="offer-dots" role="tablist" aria-label="Offer slides">
+              {offerSlides.map((offer, index) => (
+                <button
+                  key={offer.id}
+                  type="button"
+                  className={index === activeOffer ? 'is-active' : ''}
+                  aria-label={`Show ${offer.label}`}
+                  aria-selected={index === activeOffer}
+                  onClick={() => setActiveOffer(index)}
+                />
               ))}
             </div>
-          </div>
+          </section>
 
-          <div className="offer-dots" role="tablist" aria-label="Offer slides">
-            {offerSlides.map((offer, index) => (
-              <button
-                key={offer.id}
-                type="button"
-                className={index === activeOffer ? 'is-active' : ''}
-                aria-label={`Show ${offer.label}`}
-                aria-selected={index === activeOffer}
-                onClick={() => setActiveOffer(index)}
-              />
-            ))}
-          </div>
-        </section>
+          <section className="collection-hero">
+            <p className="collection-label">Home page direction inspired by your reference</p>
+            <h1>Best Seller</h1>
+            <p className="collection-text">
+              Clean collection-style homepage with dense product grid, lightweight filters,
+              center-brand header, and a responsive hamburger drawer.
+            </p>
+          </section>
 
-        <section className="collection-hero">
-          <p className="collection-label">Home page direction inspired by your reference</p>
-          <h1>Best Seller</h1>
-          <p className="collection-text">
-            Clean collection-style homepage with dense product grid, lightweight filters,
-            center-brand header, and a responsive hamburger drawer.
-          </p>
-        </section>
+          <section className="toolbar-row">
+            <div className="filter-group">
+              <span>Filter:</span>
+              {filters.map((filter) => (
+                <button key={filter} type="button" className="toolbar-chip">
+                  {filter}
+                  <Icon name="chevron" />
+                </button>
+              ))}
+            </div>
 
-        <section className="toolbar-row">
-          <div className="filter-group">
-            <span>Filter:</span>
-            {filters.map((filter) => (
-              <button key={filter} type="button" className="toolbar-chip">
-                {filter}
+            <div className="sort-group">
+              <span>Sort by:</span>
+              <button type="button" className="toolbar-chip">
+                Featured
                 <Icon name="chevron" />
               </button>
-            ))}
-          </div>
+              <strong>66 products</strong>
+            </div>
+          </section>
 
-          <div className="sort-group">
-            <span>Sort by:</span>
-            <button type="button" className="toolbar-chip">
-              Featured
+          <section className="product-grid" aria-label="Best seller products">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} onChooseOption={openProduct} />
+            ))}
+          </section>
+
+          <div className="pagination">
+            <button type="button" className="is-active">
+              1
+            </button>
+            <button type="button">2</button>
+            <button type="button" aria-label="Next page">
               <Icon name="chevron" />
             </button>
-            <strong>66 products</strong>
           </div>
-        </section>
 
-        <section className="product-grid" aria-label="Best seller products">
-          {products.map((product) => (
-            <ProductCard key={product.name} product={product} />
-          ))}
-        </section>
-
-        <div className="pagination">
-          <button type="button" className="is-active">
-            1
-          </button>
-          <button type="button">2</button>
-          <button type="button" aria-label="Next page">
-            <Icon name="chevron" />
-          </button>
-        </div>
-
-        <section className="login-callout" id="login">
-          <div>
-            <p className="callout-kicker">Login Button Added</p>
-            <h2>Saved wishlist, account access, and future offers are ready to plug in.</h2>
-          </div>
-          <a href="#top">Login</a>
-        </section>
-      </main>
+          <section className="login-callout" id="login">
+            <div>
+              <p className="callout-kicker">Login and OTP Added</p>
+              <h2>Tap login, enter your number, and continue through the OTP card flow.</h2>
+            </div>
+            <button type="button" onClick={openLoginModal}>
+              {isLoggedIn ? 'Open account' : 'Login'}
+            </button>
+          </section>
+        </main>
+      )}
 
       <footer className="site-footer" id="footer">
         <div className="footer-brand">
-          <a href="#top" className="footer-logo" aria-label="Aryass home">
+          <a
+            href="#top"
+            className="footer-logo"
+            aria-label="Aryass home"
+            onClick={() => setSelectedProductId(null)}
+          >
             <span className="brand-word">ARYASS</span>
             <span className="brand-tagline">FEEL BEFORE THE MOMENT</span>
           </a>
@@ -952,7 +1270,7 @@ function App() {
         <div className="footer-column">
           <h3>Shop</h3>
           {shopLinks.map((link) => (
-            <a key={link} href="#collection">
+            <a key={link} href="#collection" onClick={() => setSelectedProductId(null)}>
               {link}
             </a>
           ))}
@@ -961,7 +1279,7 @@ function App() {
         <div className="footer-column">
           <h3>Quick Links</h3>
           {quickLinks.map((link) => (
-            <a key={link} href="#collection">
+            <a key={link} href="#collection" onClick={() => setSelectedProductId(null)}>
               {link}
             </a>
           ))}
@@ -971,6 +1289,7 @@ function App() {
           <h3>Our Achievements</h3>
           <p>Forbes Recognized</p>
           <p>Luxury edits made lighter for mobile browsing.</p>
+          {isLoggedIn ? <p>Signed in as {accountPhone}</p> : null}
         </div>
       </footer>
 
@@ -985,6 +1304,26 @@ function App() {
         <strong>Live Video Call</strong>
         <span>Open now | Till 7:30 PM</span>
       </div>
+
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={closeLoginModal}
+        loginStep={loginStep}
+        phoneNumber={phoneNumber}
+        otpDigits={otpDigits}
+        loginError={loginError}
+        loginMessage={loginMessage}
+        onPhoneChange={(value) => {
+          setPhoneNumber(value.replace(/\D/g, '').slice(0, 10))
+          setLoginError('')
+        }}
+        onPhoneSubmit={handlePhoneSubmit}
+        onVerifyOtp={handleVerifyOtp}
+        onOtpChange={handleOtpChange}
+        onOtpKeyDown={handleOtpKeyDown}
+        onResendOtp={handleResendOtp}
+        otpInputRefs={otpInputRefs}
+      />
     </div>
   )
 }
