@@ -12,7 +12,7 @@ const mobileMenuItems = [
 ]
 
 const announcementMessages = [
-  'First order par 10% off | Use code WELCOME10',
+  'First order par 10% off | Use code FIRST10',
   'Crafted in India. Delivered to the world.',
   'Buy 2 styles and save 12% on curated edits.',
   'Free shipping above Rs. 1,999 and easy returns.',
@@ -23,9 +23,11 @@ const offerSlides = [
     id: 'welcome10',
     label: 'First Order Special',
     title: 'Get 10% Off On Your First Order',
-    code: 'WELCOME10',
+    code: 'FIRST10',
     description:
       'Naye shoppers ke liye welcome offer. Shirt, dress, top ya co ord set par instant first order discount.',
+    image: '/offers/first-order-special.png',
+    alt: 'Aryass first order special banner showing 10% off on the first order with code FIRST10.',
     stats: [
       { value: '10%', label: 'Instant off' },
       { value: 'New', label: 'Customer deal' },
@@ -73,7 +75,7 @@ const offerSlides = [
   },
 ]
 
-const filters = ['Hindi', 'Rs', 'Color', 'Size']
+const filters = ['Rs', 'Size']
 
 const shopLinks = [
   'Daily Drop',
@@ -294,6 +296,8 @@ const productSizeSets = [
   ['M', 'L', 'XL', 'XXL'],
 ]
 
+const sizeFilterLabels = ['XS', 'S', 'M', 'L', 'XL', 'XXL']
+
 const products = baseProducts.map((product, index) => {
   const gallery = Array.from({ length: 4 }, (_, offset) => {
     return productImages[(index + offset) % productImages.length]
@@ -315,6 +319,7 @@ const products = baseProducts.map((product, index) => {
     id: `aryass-product-${index + 1}`,
     image: gallery[0],
     gallery,
+    priceValue: Number(product.price.replace(/,/g, '')),
     category,
     colors,
     sizes,
@@ -345,8 +350,59 @@ const products = baseProducts.map((product, index) => {
   }
 })
 
+const sizeFilterOptions = sizeFilterLabels.map((label) => ({
+  label,
+  count: products.filter((product) =>
+    product.sizes.some((size) => size.label === label && size.available),
+  ).length,
+}))
+
 function formatPrice(price) {
   return `Rs. ${price}`
+}
+
+function formatPriceValue(price) {
+  return formatPrice(
+    price.toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+  )
+}
+
+function matchSizeFilter(product, selectedSizes) {
+  return (
+    !selectedSizes.length ||
+    product.sizes.some((size) => size.available && selectedSizes.includes(size.label))
+  )
+}
+
+function getNormalizedPriceRange(minPriceInput, maxPriceInput) {
+  const minPrice = minPriceInput ? Number(minPriceInput) : null
+  const maxPrice = maxPriceInput ? Number(maxPriceInput) : null
+
+  if (minPrice !== null && maxPrice !== null) {
+    return {
+      minPrice: Math.min(minPrice, maxPrice),
+      maxPrice: Math.max(minPrice, maxPrice),
+    }
+  }
+
+  return { minPrice, maxPrice }
+}
+
+function matchPriceFilter(product, minPriceInput, maxPriceInput) {
+  const { minPrice, maxPrice } = getNormalizedPriceRange(minPriceInput, maxPriceInput)
+
+  if (minPrice !== null && product.priceValue < minPrice) {
+    return false
+  }
+
+  if (maxPrice !== null && product.priceValue > maxPrice) {
+    return false
+  }
+
+  return true
 }
 
 function maskPhoneNumber(phoneNumber) {
@@ -559,6 +615,150 @@ function LoginModal({
         </div>
       </div>
     </div>
+  )
+}
+
+function SizeFilterPage({
+  sizeOptions,
+  selectedSizes,
+  filteredCount,
+  onToggleSize,
+  onReset,
+  onBack,
+}) {
+  return (
+    <main className="filter-page" id="collection">
+      <section className="filter-page-shell" aria-label="Size filter">
+        <div className="filter-page-top">
+          <button type="button" className="back-button" onClick={onBack}>
+            <Icon name="left" />
+            Back to collection
+          </button>
+
+          <button
+            type="button"
+            className="filter-reset-button"
+            onClick={onReset}
+            disabled={!selectedSizes.length}
+          >
+            Reset
+          </button>
+        </div>
+
+        <div className="filter-page-header">
+          <p className="collection-label">Filter by</p>
+          <h1>Size</h1>
+          <p className="collection-text">
+            Tap sizes to refine the collection, then open the filtered product grid.
+          </p>
+        </div>
+
+        <div className="filter-selection-row">
+          <strong>{selectedSizes.length} selected</strong>
+          <span>{filteredCount} products</span>
+        </div>
+
+        <div className="size-filter-list">
+          {sizeOptions.map((option) => {
+            const isChecked = selectedSizes.includes(option.label)
+
+            return (
+              <label key={option.label} className="size-filter-item">
+                <input
+                  className="size-filter-checkbox"
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => onToggleSize(option.label)}
+                />
+                <span className="size-filter-label">
+                  {option.label} ({option.count})
+                </span>
+              </label>
+            )
+          })}
+        </div>
+
+        <div className="filter-page-actions">
+          <button
+            type="button"
+            className="secondary-action-button"
+            onClick={onReset}
+            disabled={!selectedSizes.length}
+          >
+            Clear sizes
+          </button>
+          <button type="button" className="primary-action-button" onClick={onBack}>
+            Show {filteredCount} products
+          </button>
+        </div>
+      </section>
+    </main>
+  )
+}
+
+function PriceFilterPage({
+  highestPrice,
+  minPriceInput,
+  maxPriceInput,
+  filteredCount,
+  onMinPriceChange,
+  onMaxPriceChange,
+  onReset,
+  onBack,
+}) {
+  return (
+    <main className="filter-page price-filter-page" id="collection">
+      <button type="button" className="back-button" onClick={onBack}>
+        <Icon name="left" />
+        Back to collection
+      </button>
+
+      <section className="price-filter-panel" aria-label="Price filter">
+        <div className="price-filter-summary">
+          <p>The highest price is {formatPriceValue(highestPrice)}</p>
+          <button
+            type="button"
+            className="filter-reset-button"
+            onClick={onReset}
+            disabled={!minPriceInput && !maxPriceInput}
+          >
+            Reset
+          </button>
+        </div>
+
+        <div className="price-filter-input-row">
+          <label className="price-filter-input-group">
+            <span>&#8377;</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="From"
+              value={minPriceInput}
+              onChange={(event) => onMinPriceChange(event.target.value)}
+              aria-label="Minimum price"
+            />
+          </label>
+
+          <label className="price-filter-input-group">
+            <span>&#8377;</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="To"
+              value={maxPriceInput}
+              onChange={(event) => onMaxPriceChange(event.target.value)}
+              aria-label="Maximum price"
+            />
+          </label>
+        </div>
+      </section>
+
+      <div className="filter-page-actions filter-page-actions--single">
+        <button type="button" className="primary-action-button" onClick={onBack}>
+          Show {filteredCount} products
+        </button>
+      </div>
+    </main>
   )
 }
 
@@ -804,6 +1004,7 @@ function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeMessage, setActiveMessage] = useState(0)
   const [activeOffer, setActiveOffer] = useState(0)
+  const [activeFilterPage, setActiveFilterPage] = useState(null)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
   const [loginStep, setLoginStep] = useState('phone')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -819,10 +1020,22 @@ function App() {
   const [selectedImage, setSelectedImage] = useState('')
   const [selectedColor, setSelectedColor] = useState('')
   const [selectedSize, setSelectedSize] = useState('')
+  const [selectedFilterSizes, setSelectedFilterSizes] = useState([])
+  const [minPriceInput, setMinPriceInput] = useState('')
+  const [maxPriceInput, setMaxPriceInput] = useState('')
   const [quantity, setQuantity] = useState(1)
   const otpInputRefs = useRef([])
 
   const selectedProduct = products.find((product) => product.id === selectedProductId) || null
+  const sizeMatchedProducts = products.filter((product) =>
+    matchSizeFilter(product, selectedFilterSizes),
+  )
+  const filteredProducts = sizeMatchedProducts.filter((product) =>
+    matchPriceFilter(product, minPriceInput, maxPriceInput),
+  )
+  const highestVisiblePrice = sizeMatchedProducts.length
+    ? Math.max(...sizeMatchedProducts.map((product) => product.priceValue))
+    : Math.max(...products.map((product) => product.priceValue))
   const relatedProducts = selectedProduct
     ? products.filter((product) => product.id !== selectedProduct.id).slice(0, 4)
     : []
@@ -852,6 +1065,7 @@ function App() {
       if (event.key === 'Escape') {
         setIsMenuOpen(false)
         setIsLoginOpen(false)
+        setActiveFilterPage(null)
       }
     }
 
@@ -903,12 +1117,60 @@ function App() {
     setSelectedColor(product.colors[0])
     setSelectedSize(defaultSize)
     setQuantity(1)
+    setActiveFilterPage(null)
     setIsMenuOpen(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const closeProduct = () => {
     setSelectedProductId(null)
+  }
+
+  const openSizeFilterPage = () => {
+    setSelectedProductId(null)
+    setIsMenuOpen(false)
+    setActiveFilterPage('size')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const openPriceFilterPage = () => {
+    setSelectedProductId(null)
+    setIsMenuOpen(false)
+    setActiveFilterPage('price')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const closeSizeFilterPage = () => {
+    setActiveFilterPage(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const closePriceFilterPage = () => {
+    setActiveFilterPage(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const toggleFilterSize = (label) => {
+    setSelectedFilterSizes((current) =>
+      current.includes(label) ? current.filter((item) => item !== label) : [...current, label],
+    )
+  }
+
+  const resetFilterSizes = () => {
+    setSelectedFilterSizes([])
+  }
+
+  const handleMinPriceChange = (value) => {
+    setMinPriceInput(value.replace(/\D/g, '').slice(0, 7))
+  }
+
+  const handleMaxPriceChange = (value) => {
+    setMaxPriceInput(value.replace(/\D/g, '').slice(0, 7))
+  }
+
+  const resetPriceFilter = () => {
+    setMinPriceInput('')
+    setMaxPriceInput('')
   }
 
   const handlePhoneSubmit = (event) => {
@@ -985,6 +1247,7 @@ function App() {
 
   const handleMenuLinkClick = () => {
     setSelectedProductId(null)
+    setActiveFilterPage(null)
     setIsMenuOpen(false)
   }
 
@@ -1051,7 +1314,10 @@ function App() {
           className="brand-mark"
           href="#top"
           aria-label="Aryass home"
-          onClick={() => setSelectedProductId(null)}
+          onClick={() => {
+            setSelectedProductId(null)
+            setActiveFilterPage(null)
+          }}
         >
           <span className="brand-word">ARYASS</span>
           <span className="brand-tagline">FEEL BEFORE THE MOMENT</span>
@@ -1087,31 +1353,44 @@ function App() {
         aria-label="Navigation drawer"
       >
         <div className="drawer-header">
-          <div>
-            <p className="drawer-kicker">Collections</p>
-            <strong>Browse Aryass</strong>
+          <div className="drawer-tool-row">
+            <button
+              type="button"
+              className="drawer-tool-button drawer-tool-button--close"
+              aria-label="Close menu"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <Icon name="close" />
+            </button>
+
+            <button type="button" className="drawer-tool-button" aria-label="Search collection">
+              <Icon name="search" />
+            </button>
           </div>
-          <button
-            type="button"
-            className="header-icon"
-            aria-label="Close menu"
-            onClick={() => setIsMenuOpen(false)}
-          >
-            <Icon name="close" />
-          </button>
         </div>
 
         <nav className="drawer-links">
           {mobileMenuItems.map((item) => (
             <a key={item} href="#collection" onClick={handleMenuLinkClick}>
-              {item}
+              <span>{item}</span>
+              <Icon name="chevron" />
             </a>
           ))}
         </nav>
 
-        <button type="button" className="drawer-login" onClick={openLoginModal}>
-          {isLoggedIn ? 'My Account' : 'Login / Account'}
-        </button>
+        <div className="drawer-footer">
+          <div className="drawer-socials">
+            <a href="#footer" aria-label="Facebook" onClick={() => setIsMenuOpen(false)}>
+              <Icon name="facebook" />
+            </a>
+            <a href="#footer" aria-label="Instagram" onClick={() => setIsMenuOpen(false)}>
+              <Icon name="instagram" />
+            </a>
+            <a href="#footer" aria-label="YouTube" onClick={() => setIsMenuOpen(false)}>
+              <Icon name="youtube" />
+            </a>
+          </div>
+        </div>
       </aside>
 
       {selectedProduct ? (
@@ -1129,43 +1408,63 @@ function App() {
           onChooseOption={openProduct}
           relatedProducts={relatedProducts}
         />
+      ) : activeFilterPage === 'size' ? (
+        <SizeFilterPage
+          sizeOptions={sizeFilterOptions}
+          selectedSizes={selectedFilterSizes}
+          filteredCount={filteredProducts.length}
+          onToggleSize={toggleFilterSize}
+          onReset={resetFilterSizes}
+          onBack={closeSizeFilterPage}
+        />
+      ) : activeFilterPage === 'price' ? (
+        <PriceFilterPage
+          highestPrice={highestVisiblePrice}
+          minPriceInput={minPriceInput}
+          maxPriceInput={maxPriceInput}
+          filteredCount={filteredProducts.length}
+          onMinPriceChange={handleMinPriceChange}
+          onMaxPriceChange={handleMaxPriceChange}
+          onReset={resetPriceFilter}
+          onBack={closePriceFilterPage}
+        />
       ) : (
         <main className="collection-page" id="collection">
           <section className="offer-slider-section" aria-label="Offers">
-            <div className="offer-slider-copy">
-              <p className="collection-label">Featured Offers</p>
-              <h2>Shop offers that slide automatically</h2>
-              <p className="collection-text">
-                First order par 10% off hero offer ke saath aur bhi cart deals rotate hongi,
-                taki homepage par savings instantly visible rahein.
-              </p>
-            </div>
-
             <div className="offer-slider-frame">
               <div
                 className="offer-slider-track"
                 style={{ transform: `translateX(-${activeOffer * 100}%)` }}
               >
                 {offerSlides.map((offer) => (
-                  <article key={offer.id} className="offer-slide-card">
-                    <div className="offer-slide-content">
-                      <span className="offer-pill">{offer.label}</span>
-                      <h3>{offer.title}</h3>
-                      <p>{offer.description}</p>
-                      <div className="offer-code-row">
-                        <span>Use code</span>
-                        <strong>{offer.code}</strong>
-                      </div>
-                    </div>
-
-                    <div className="offer-stats-grid">
-                      {offer.stats.map((stat) => (
-                        <div key={stat.label} className="offer-stat-card">
-                          <strong>{stat.value}</strong>
-                          <span>{stat.label}</span>
+                  <article
+                    key={offer.id}
+                    className={`offer-slide-card ${offer.image ? 'offer-slide-card--visual' : ''}`}
+                  >
+                    {offer.image ? (
+                      <img className="offer-slide-banner" src={offer.image} alt={offer.alt} />
+                    ) : (
+                      <>
+                        <div className="offer-slide-content">
+                          <span className="offer-pill">{offer.label}</span>
+                          <h3>{offer.title}</h3>
+                          <p>{offer.description}</p>
+                          <div className="offer-code-row">
+                            <span>Use code</span>
+                            <strong>{offer.code}</strong>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+
+                        <div className="offer-stats-grid">
+                          {offer.stats.map((stat) => (
+                            <div key={stat.label} className="offer-stat-card">
+                              <strong>{stat.value}</strong>
+                              <span>{stat.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </article>
                 ))}
               </div>
@@ -1198,25 +1497,38 @@ function App() {
             <div className="filter-group">
               <span>Filter:</span>
               {filters.map((filter) => (
-                <button key={filter} type="button" className="toolbar-chip">
-                  {filter}
+                <button
+                  key={filter}
+                  type="button"
+                  className={`toolbar-chip ${
+                    (filter === 'Size' && selectedFilterSizes.length) ||
+                    (filter === 'Rs' && (minPriceInput || maxPriceInput))
+                      ? 'is-active'
+                      : ''
+                  }`}
+                  onClick={
+                    filter === 'Size'
+                      ? openSizeFilterPage
+                      : filter === 'Rs'
+                        ? openPriceFilterPage
+                        : undefined
+                  }
+                >
+                  {filter === 'Size' && selectedFilterSizes.length
+                    ? `Size (${selectedFilterSizes.length})`
+                    : filter}
                   <Icon name="chevron" />
                 </button>
               ))}
             </div>
 
             <div className="sort-group">
-              <span>Sort by:</span>
-              <button type="button" className="toolbar-chip">
-                Featured
-                <Icon name="chevron" />
-              </button>
-              <strong>66 products</strong>
+              <strong>{filteredProducts.length} products</strong>
             </div>
           </section>
 
           <section className="product-grid" aria-label="Best seller products">
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} onChooseOption={openProduct} />
             ))}
           </section>
@@ -1249,7 +1561,10 @@ function App() {
             href="#top"
             className="footer-logo"
             aria-label="Aryass home"
-            onClick={() => setSelectedProductId(null)}
+            onClick={() => {
+              setSelectedProductId(null)
+              setActiveFilterPage(null)
+            }}
           >
             <span className="brand-word">ARYASS</span>
             <span className="brand-tagline">FEEL BEFORE THE MOMENT</span>
@@ -1270,7 +1585,14 @@ function App() {
         <div className="footer-column">
           <h3>Shop</h3>
           {shopLinks.map((link) => (
-            <a key={link} href="#collection" onClick={() => setSelectedProductId(null)}>
+            <a
+              key={link}
+              href="#collection"
+              onClick={() => {
+                setSelectedProductId(null)
+                setActiveFilterPage(null)
+              }}
+            >
               {link}
             </a>
           ))}
@@ -1279,7 +1601,14 @@ function App() {
         <div className="footer-column">
           <h3>Quick Links</h3>
           {quickLinks.map((link) => (
-            <a key={link} href="#collection" onClick={() => setSelectedProductId(null)}>
+            <a
+              key={link}
+              href="#collection"
+              onClick={() => {
+                setSelectedProductId(null)
+                setActiveFilterPage(null)
+              }}
+            >
               {link}
             </a>
           ))}
