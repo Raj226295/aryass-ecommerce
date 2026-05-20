@@ -688,8 +688,8 @@ function SizeFilterPage({
             Clear sizes
           </button>
           <button type="button" className="primary-action-button" onClick={onBack}>
-            Show {filteredCount} products
-          </button>
+  Show {filteredCount} products
+</button>
         </div>
       </section>
     </main>
@@ -762,6 +762,8 @@ function PriceFilterPage({
   )
 }
 
+
+
 function ProductDetailPage({
   product,
   selectedImage,
@@ -775,7 +777,10 @@ function ProductDetailPage({
   onChangeQuantity,
   onChooseOption,
   relatedProducts,
-}) {
+  onAddToCart,
+  // reviews is currently not rendered in this page section
+  onOpenReview,
+}){
   return (
     <main className="detail-page">
       <section className="detail-breadcrumb-row">
@@ -905,12 +910,22 @@ function ProductDetailPage({
           </div>
 
           <div className="detail-action-stack">
-            <button type="button" className="primary-action-button" disabled={product.soldOut}>
-              {product.soldOut ? 'Notify me' : 'Add to cart'}
-            </button>
-            <button type="button" className="secondary-action-button" disabled={product.soldOut}>
-              Buy it now
-            </button>
+            
+  <button
+    type="button"
+    className="primary-action-button"
+    disabled={product.soldOut}
+    onClick={onAddToCart}
+  >
+    {product.soldOut ? 'Notify me' : 'Add to cart'}
+  </button>
+  <button
+    type="button"
+    className="secondary-action-button"
+    disabled={product.soldOut}
+  >
+    Buy it now
+  </button>
           </div>
 
           <div className="detail-benefit-grid">
@@ -958,12 +973,14 @@ function ProductDetailPage({
           <p className="collection-label">Customer Reviews</p>
           <h2>People are saving this look for their next occasion.</h2>
         </div>
-        <div className="review-card">
-          <p className="review-empty">There are no reviews yet. Be the first to review this style.</p>
-          <button type="button" className="review-button">
-            Write a review
-          </button>
-        </div>
+          <div className="review-card">
+            <p className="review-empty">
+              There are no reviews yet. Be the first to review this style.
+            </p>
+            <button type="button" className="review-button" onClick={onOpenReview}>
+              Write a review
+            </button>
+          </div>
       </section>
 
       <section className="detail-related-section">
@@ -1024,6 +1041,31 @@ function App() {
   const [minPriceInput, setMinPriceInput] = useState('')
   const [maxPriceInput, setMaxPriceInput] = useState('')
   const [quantity, setQuantity] = useState(1)
+
+  const [isCartOpen, setIsCartOpen] = useState(false)
+
+  
+const [cartItems, setCartItems] = useState([])
+
+const [reviews, setReviews] = useState([])
+
+const [isReviewOpen, setIsReviewOpen] = useState(false)
+
+
+
+const [reviewData,setReviewData]=useState({
+rating:0,
+text:"",
+name:"",
+email:"",
+photos:[]
+})
+
+
+
+
+
+
   const otpInputRefs = useRef([])
 
   const selectedProduct = products.find((product) => product.id === selectedProductId) || null
@@ -1254,6 +1296,124 @@ function App() {
   const handleQuantityChange = (change) => {
     setQuantity((current) => Math.max(1, current + change))
   }
+const openReview = () => {
+  setIsReviewOpen(true)
+}
+
+const updateCartQty=(id,type)=>{
+
+setCartItems(current=>
+current.map(item=>{
+
+if(item.id!==id) return item
+
+return{
+...item,
+qty:type==="inc"
+? item.qty+1
+:Math.max(1,item.qty-1)
+}
+
+})
+)
+
+}
+
+const totalPrice=cartItems.reduce(
+(sum,item)=>sum+item.price*item.qty,
+0
+)
+
+
+const addToCart = () => {
+
+if(!selectedProduct) return
+
+const existingItem = cartItems.find(
+item =>
+item.id === selectedProduct.id &&
+item.size === selectedSize &&
+item.color === selectedColor
+)
+
+if(existingItem){
+
+setCartItems(current =>
+current.map(item =>
+item.id===selectedProduct.id
+? {...item,qty:item.qty+quantity}
+:item
+)
+)
+
+}else{
+
+setCartItems(current=>[
+...current,
+{
+id:selectedProduct.id,
+name:selectedProduct.name,
+price:Number(selectedProduct.price.replace(/,/g,'')),
+qty:quantity,
+size:selectedSize,
+color:selectedColor,
+image:selectedProduct.image
+}
+])
+
+}
+
+setIsCartOpen(true)
+
+}
+
+const submitReview=()=>{
+
+if(
+!reviewData.rating ||
+!reviewData.text ||
+!reviewData.name ||
+!reviewData.email
+){
+alert("Fill all details")
+return
+}
+
+const newReview={
+id:Date.now(),
+...reviewData
+}
+
+setReviews(current=>[newReview,...current])
+
+setReviewData({
+rating:0,
+text:"",
+name:"",
+email:"",
+photos:[]
+})
+
+setIsReviewOpen(false)
+
+}
+
+
+const handlePhoto=(e)=>{
+
+const files=[...e.target.files]
+
+const images=files.map(file=>
+URL.createObjectURL(file)
+)
+
+setReviewData(prev=>({
+...prev,
+photos:[...prev.photos,...images].slice(0,5)
+}))
+
+}
+
 
   return (
     <div className="page-shell" id="top">
@@ -1331,13 +1491,33 @@ function App() {
             <Icon name="account" />
           </button>
           <button
-            type="button"
-            className="header-icon header-icon--cart"
-            aria-label="Shopping bag"
-            onClick={selectedProduct ? () => setSelectedProductId(selectedProduct.id) : undefined}
-          >
-            <Icon name="bag" />
-          </button>
+type="button"
+className="header-icon header-icon--cart"
+onClick={()=>setIsCartOpen(true)}
+>
+
+<Icon name="bag"/>
+
+<span
+style={{
+position:"absolute",
+top:"2px",
+right:"2px",
+background:"black",
+color:"white",
+fontSize:"10px",
+width:"18px",
+height:"18px",
+borderRadius:"50%",
+display:"flex",
+alignItems:"center",
+justifyContent:"center"
+}}
+>
+{cartItems.length}
+</span>
+
+</button>
         </div>
       </header>
 
@@ -1395,19 +1575,22 @@ function App() {
 
       {selectedProduct ? (
         <ProductDetailPage
-          product={selectedProduct}
-          selectedImage={selectedImage}
-          selectedColor={selectedColor}
-          selectedSize={selectedSize}
-          quantity={quantity}
-          onBack={closeProduct}
-          onSelectImage={setSelectedImage}
-          onSelectColor={setSelectedColor}
-          onSelectSize={setSelectedSize}
-          onChangeQuantity={handleQuantityChange}
-          onChooseOption={openProduct}
-          relatedProducts={relatedProducts}
-        />
+  product={selectedProduct}
+  onAddToCart={addToCart}
+  selectedImage={selectedImage}
+  selectedColor={selectedColor}
+  selectedSize={selectedSize}
+  quantity={quantity}
+  onBack={closeProduct}
+  onSelectImage={setSelectedImage}
+  onSelectColor={setSelectedColor}
+  onSelectSize={setSelectedSize}
+  onChangeQuantity={handleQuantityChange}
+  onChooseOption={openProduct}
+  relatedProducts={relatedProducts}
+  reviews={reviews}
+  onOpenReview={openReview}
+/>
       ) : activeFilterPage === 'size' ? (
         <SizeFilterPage
           sizeOptions={sizeFilterOptions}
@@ -1633,6 +1816,232 @@ function App() {
         <strong>Live Video Call</strong>
         <span>Open now | Till 7:30 PM</span>
       </div>
+
+
+      <div
+className={`cart-overlay ${isCartOpen?"show":""}`}
+onClick={()=>setIsCartOpen(false)}
+></div>
+
+<div className={`cart-drawer ${isCartOpen?"open":""}`}>
+
+<div className="cart-top">
+
+<h2>Your cart</h2>
+
+<button
+onClick={()=>setIsCartOpen(false)}
+style={{
+border:"none",
+background:"transparent",
+fontSize:"35px",
+cursor:"pointer"
+}}
+>
+×
+</button>
+
+</div>
+
+<div className="cart-items">
+
+{cartItems.map(item=>(
+
+<div className="cart-item" key={item.id}>
+
+<img src={item.image}/>
+
+<div>
+
+<h4>{item.name}</h4>
+
+<p>Rs. {item.price}</p>
+
+<p>Color: {item.color}</p>
+
+<p>Size: {item.size}</p>
+
+<div className="qty-box">
+
+<button onClick={()=>updateCartQty(item.id,"dec")}>
+-
+</button>
+
+<span>{item.qty}</span>
+
+<button onClick={()=>updateCartQty(item.id,"inc")}>
++
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+))}
+
+</div>
+
+<div className="cart-bottom">
+
+<div className="total-row">
+
+<h3>Total</h3>
+
+<h3>
+Rs. {totalPrice.toLocaleString()}
+</h3>
+
+</div>
+
+<button className="checkout-btn">
+
+CHECKOUT
+
+</button>
+
+</div>
+
+</div>
+
+
+
+{isReviewOpen && (
+
+<div
+className="review-overlay"
+onClick={()=>setIsReviewOpen(false)}
+>
+
+<div
+className="review-popup"
+onClick={(e)=>e.stopPropagation()}
+>
+
+<button
+className="review-close"
+onClick={()=>setIsReviewOpen(false)}
+>
+×
+</button>
+
+<h2>Write a review</h2>
+
+<div className="review-product">
+
+<img
+src={selectedProduct?.image}
+alt=""
+/>
+
+<div>
+<h4>{selectedProduct?.name}</h4>
+<p>{selectedProduct?.price}</p>
+</div>
+
+</div>
+
+<label>Rating</label>
+
+<div className="star-row">
+ {[1,2,3,4,5].map(star=>(
+   <span
+     key={star}
+     style={{
+       fontSize:"30px",
+       cursor:"pointer"
+     }}
+     onClick={()=>
+      setReviewData(prev=>({
+       ...prev,
+       rating:star
+      }))
+     }
+   >
+    {star<=reviewData.rating ? "⭐":"☆"}
+   </span>
+ ))}
+</div>
+
+<label>Review</label>
+
+<textarea
+placeholder="Share feedback..."
+rows="5"
+value={reviewData.text}
+onChange={(e)=>
+setReviewData(prev=>({
+...prev,
+text:e.target.value
+}))
+}
+/>
+
+<label>Your name</label>
+
+<input
+placeholder="Enter name"
+value={reviewData.name}
+onChange={(e)=>
+setReviewData(prev=>({
+...prev,
+name:e.target.value
+}))
+}
+/>
+
+<label>Your email</label>
+
+<input
+placeholder="Enter email"
+value={reviewData.email}
+onChange={(e)=>
+setReviewData(prev=>({
+...prev,
+email:e.target.value
+}))
+}
+/>
+
+<input
+type="file"
+multiple
+onChange={handlePhoto}
+/>
+
+<div className="photo-preview">
+
+{reviewData.photos.map((img,index)=>(
+
+<img
+key={index}
+src={img}
+style={{
+width:"70px",
+height:"70px",
+objectFit:"cover",
+margin:"5px"
+}}
+/>
+
+))}
+
+</div>
+<button
+className="submit-review"
+onClick={submitReview}
+>
+Submit review
+</button>
+
+</div>
+
+</div>
+
+)}
+
+
 
       <LoginModal
         isOpen={isLoginOpen}
