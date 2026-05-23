@@ -38,6 +38,18 @@
   text-decoration: none;
 }
 
+/* Make FB/Instagram/Youtube icons white */
+.social-strip svg,
+.footer-socials svg {
+  color: #ffffff;
+}
+
+/* Fix YouTube icon looking odd: override SVG fill behavior */
+.social-strip svg[viewBox="0 0 24 24"],
+.footer-socials svg[viewBox="0 0 24 24"] {
+  fill: #ffffff;
+}
+
 .social-strip svg,
 .footer-socials svg,
 .header-icon svg,
@@ -123,6 +135,8 @@
 }
 
 .header-icon {
+  position: relative;
+z-index: 100;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -213,12 +227,23 @@
   text-transform: uppercase;
 }
 
-.drawer-backdrop,
+.drawer-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+
+  opacity: 0;
+  visibility: hidden;
+
+  transition: all 0.3s ease;
+
+  z-index: 9999;
+}
 .login-modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 29;
+  z-index: 35;
 }
 
 .drawer-backdrop {
@@ -229,8 +254,9 @@
 
 .drawer-backdrop.is-visible {
   opacity: 1;
-  pointer-events: auto;
+   visibility: visible;
 }
+
 
 .mobile-drawer {
   position: fixed;
@@ -243,14 +269,14 @@
   gap: 0;
   background: #ffffff;
   border-right: 1px solid #ece8e1;
-  transform: translateX(-101%);
   box-shadow: 22px 0 48px rgba(16, 14, 11, 0.12);
-  transition: transform 0.3s ease;
+  left: 0;
+top: 0;
+transition: all 0.3s ease;
+will-change: transform;
 }
 
-.mobile-drawer.is-open {
-  transform: translateX(0);
-}
+
 
 .drawer-header {
   padding: 1rem 1rem 0;
@@ -1690,6 +1716,7 @@ max-height:100%;
   .mobile-drawer,
   .drawer-backdrop {
     display: none;
+    z-index: 998;
   }
 }
 
@@ -1820,8 +1847,26 @@ max-height:100%;
   }
 
   .mobile-drawer {
-    width: calc(100vw - 0.35rem);
-  }
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 370px;
+  max-width: 90%;
+  height: 100vh;
+  background: #fff;
+  z-index: 99999;
+
+  display: flex;
+  flex-direction: column;
+
+  transform: translateX(-100%);
+  transition: transform 0.35s ease;
+
+  box-shadow: 0 0 40px rgba(0,0,0,0.18);
+}
+.mobile-drawer.is-open{
+  transform: translateX(0);
+}
 
   .product-grid {
     grid-template-columns: 1fr;
@@ -2396,3 +2441,7 @@ color:white;
 border:none;
 margin-top:20px;
 }
+/* Pointer-events fix:
+   Mobile drawer must remain clickable when open. Avoid restricting clicks by breakpoint. */
+.mobile-drawer { pointer-events: auto; }
+

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import ShirtPage from './ShirtPage'
 import './App.css'
 
 const mobileMenuItems = [
@@ -1041,6 +1042,8 @@ function App() {
   const [minPriceInput, setMinPriceInput] = useState('')
   const [maxPriceInput, setMaxPriceInput] = useState('')
   const [quantity, setQuantity] = useState(1)
+  const [activeCategory, setActiveCategory] = useState('Dress')
+  const [activePage, setActivePage] = useState('dress')
 
   const [isCartOpen, setIsCartOpen] = useState(false)
 
@@ -1075,6 +1078,14 @@ photos:[]
   const filteredProducts = sizeMatchedProducts.filter((product) =>
     matchPriceFilter(product, minPriceInput, maxPriceInput),
   )
+const categoryProducts = filteredProducts.filter(
+  (product) => product.category === activeCategory
+)
+const shirtProducts = products.filter(
+  (product) => product.category === 'Shirt'
+)
+
+
   const highestVisiblePrice = sizeMatchedProducts.length
     ? Math.max(...sizeMatchedProducts.map((product) => product.priceValue))
     : Math.max(...products.map((product) => product.priceValue))
@@ -1522,16 +1533,18 @@ justifyContent:"center"
       </header>
 
       <div
-        className={`drawer-backdrop ${isMenuOpen ? 'is-visible' : ''}`}
-        onClick={() => setIsMenuOpen(false)}
-        aria-hidden={!isMenuOpen}
-      />
+  className={`drawer-backdrop ${isMenuOpen ? 'is-visible' : ''}`}
+  onClick={() => setIsMenuOpen(false)}
+/>
 
-      <aside
-        id="mobile-drawer"
-        className={`mobile-drawer ${isMenuOpen ? 'is-open' : ''}`}
-        aria-label="Navigation drawer"
-      >
+      <div
+  className={`mobile-drawer ${isMenuOpen ? 'is-open' : ''}`}
+  style={{
+    transform: isMenuOpen
+      ? 'translateX(0)'
+      : 'translateX(-100%)'
+  }}
+>
         <div className="drawer-header">
           <div className="drawer-tool-row">
             <button
@@ -1551,7 +1564,21 @@ justifyContent:"center"
 
         <nav className="drawer-links">
           {mobileMenuItems.map((item) => (
-            <a key={item} href="#collection" onClick={handleMenuLinkClick}>
+            <a
+  key={item}
+  href="#collection"
+  onClick={() => {
+
+  if(item === 'Shirt'){
+    setActivePage('shirt')
+  } else {
+    setActivePage('dress')
+    setActiveCategory(item)
+  }
+
+  handleMenuLinkClick()
+}}
+>
               <span>{item}</span>
               <Icon name="chevron" />
             </a>
@@ -1571,7 +1598,7 @@ justifyContent:"center"
             </a>
           </div>
         </div>
-      </aside>
+      </div>
 
       {selectedProduct ? (
         <ProductDetailPage
@@ -1611,8 +1638,15 @@ justifyContent:"center"
           onReset={resetPriceFilter}
           onBack={closePriceFilterPage}
         />
-      ) : (
-        <main className="collection-page" id="collection">
+      ) : activePage === 'shirt' ? (
+
+  <ShirtPage
+    products={shirtProducts}
+    onChooseOption={openProduct}
+  />
+
+) : (
+  <main className="collection-page" id="collection">
           <section className="offer-slider-section" aria-label="Offers">
             <div className="offer-slider-frame">
               <div
@@ -1669,7 +1703,7 @@ justifyContent:"center"
 
           <section className="collection-hero">
             <p className="collection-label">Home page direction inspired by your reference</p>
-            <h1>Best Seller</h1>
+            <h1>{activeCategory}</h1>
             <p className="collection-text">
               Clean collection-style homepage with dense product grid, lightweight filters,
               center-brand header, and a responsive hamburger drawer.
@@ -1706,12 +1740,12 @@ justifyContent:"center"
             </div>
 
             <div className="sort-group">
-              <strong>{filteredProducts.length} products</strong>
+              <strong>{categoryProducts.length} products</strong>
             </div>
           </section>
 
           <section className="product-grid" aria-label="Best seller products">
-            {filteredProducts.map((product) => (
+            {categoryProducts.map((product) => (
               <ProductCard key={product.id} product={product} onChooseOption={openProduct} />
             ))}
           </section>
