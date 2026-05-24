@@ -17,6 +17,8 @@ function ProductDetailPage({
   relatedProducts,
   onAddToCart,
   onOpenReview,
+  onOpenShippingPolicy,
+  onOpenReturnPolicy,
   reviewCount,
 }) {
   return (
@@ -154,6 +156,9 @@ function ProductDetailPage({
               disabled={product.soldOut}
               onClick={onAddToCart}
             >
+              <span className="primary-action-icon">
+                <Icon name="bag" />
+              </span>
               {product.soldOut ? 'Notify me' : 'Add to cart'}
             </button>
             <button type="button" className="secondary-action-button" disabled={product.soldOut}>
@@ -188,10 +193,16 @@ function ProductDetailPage({
             <details open>
               <summary>Shipping and Delivery</summary>
               <p>Metro cities me 2-4 working days aur other locations me 4-6 working days.</p>
+              <button type="button" className="policy-inline-button" onClick={onOpenShippingPolicy}>
+                View full shipping policy
+              </button>
             </details>
             <details>
               <summary>Return and Exchange</summary>
               <p>Eligible pieces par easy exchange support available hai within 7 days of delivery.</p>
+              <button type="button" className="policy-inline-button" onClick={onOpenReturnPolicy}>
+                Open return and exchange policy
+              </button>
             </details>
             <details>
               <summary>Fabric and Care</summary>

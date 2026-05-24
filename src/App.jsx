@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import CollectionPage from './components/CollectionPage'
-import { PriceFilterPage, SizeFilterPage } from './components/FilterPages'
+import FooterPage from './components/FooterPage'
 import Icon from './components/Icon'
 import LoginModal from './components/LoginModal'
 import ProductDetailPage from './components/ProductDetailPage'
@@ -20,9 +20,14 @@ import {
   mobileMenuItems,
   products,
   quickLinks,
-  shopLinks,
   sizeFilterLabels,
 } from './data/catalog'
+import {
+  FOOTER_PAGE_IDS,
+  footerLegalLinks,
+  getFooterPageById,
+  getFooterPageForLabel,
+} from './data/footerPages'
 
 const emptyReviewData = {
   rating: 0,
@@ -32,7 +37,57 @@ const emptyReviewData = {
   photos: [],
 }
 
+const emptyAccountForm = {
+  fullName: '',
+  email: '',
+  phone: '',
+  city: '',
+}
+
 const PAGE_SIZE = 16
+
+function normalizePhoneNumber(value = '') {
+  return value.replace(/\D/g, '').slice(0, 10)
+}
+
+function getMembershipStamp() {
+  return new Intl.DateTimeFormat('en-IN', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date())
+}
+
+function buildAccountProfileFromForm(form) {
+  return {
+    fullName: form.fullName.trim(),
+    email: form.email.trim().toLowerCase(),
+    phone: normalizePhoneNumber(form.phone),
+    city: form.city.trim(),
+    memberSince: getMembershipStamp(),
+    tier: 'Private Client',
+    isGuest: false,
+  }
+}
+
+function buildGuestProfile(phone) {
+  return {
+    fullName: 'Aryass Member',
+    email: 'Not added yet',
+    phone: normalizePhoneNumber(phone),
+    city: 'Not shared yet',
+    memberSince: getMembershipStamp(),
+    tier: 'Guest Access',
+    isGuest: true,
+  }
+}
+
+function formatAccountPhone(phone = '') {
+  if (!phone) {
+    return 'Not shared yet'
+  }
+
+  return `+91 ${phone.slice(0, 5)} ${phone.slice(5)}`
+}
 
 function getDefaultSize(product, preferredSize = '') {
   if (preferredSize && product.sizes.some((size) => size.label === preferredSize)) {
@@ -46,18 +101,19 @@ function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeMessage, setActiveMessage] = useState(0)
   const [activeOffer, setActiveOffer] = useState(0)
-  const [activeFilterPage, setActiveFilterPage] = useState(null)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
+  const [authView, setAuthView] = useState('login')
   const [loginStep, setLoginStep] = useState('phone')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [otpDigits, setOtpDigits] = useState(['', '', '', ''])
   const [generatedOtp, setGeneratedOtp] = useState('')
   const [loginError, setLoginError] = useState('')
   const [loginMessage, setLoginMessage] = useState(
-    'Enter your mobile number to continue with secure sign in.',
+      'Enter your mobile number to continue with secure sign in.',
   )
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [accountPhone, setAccountPhone] = useState('')
+  const [accountProfile, setAccountProfile] = useState(null)
+  const [accountForm, setAccountForm] = useState(emptyAccountForm)
   const [selectedProductId, setSelectedProductId] = useState(null)
   const [selectedImage, setSelectedImage] = useState('')
   const [selectedColor, setSelectedColor] = useState('')
@@ -74,6 +130,7 @@ function App() {
   const [isReviewOpen, setIsReviewOpen] = useState(false)
   const [reviewData, setReviewData] = useState(emptyReviewData)
   const [currentPage, setCurrentPage] = useState(1)
+  const [activeInfoPage, setActiveInfoPage] = useState(null)
 
   const otpInputRefs = useRef([])
 
@@ -121,6 +178,9 @@ function App() {
   const cartItemCount = cartItems.reduce((total, item) => total + item.qty, 0)
   const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0)
   const currentMessage = announcementMessages[activeMessage]
+  const activeFooterPage = activeInfoPage ? getFooterPageById(activeInfoPage) : null
+  const signedInLabel =
+    accountProfile?.fullName || (accountProfile?.phone ? maskPhoneNumber(accountProfile.phone) : '')
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -161,7 +221,7 @@ function App() {
         setIsLoginOpen(false)
         setIsCartOpen(false)
         setIsReviewOpen(false)
-        setActiveFilterPage(null)
+        setActiveInfoPage(null)
       }
     }
 
@@ -203,6 +263,15 @@ function App() {
     setMaxPriceInput('')
   }
 
+  const clearSizeFilters = () => {
+    setSelectedFilterSizes([])
+  }
+
+  const clearPriceFilters = () => {
+    setMinPriceInput('')
+    setMaxPriceInput('')
+  }
+
   const handlePageChange = (nextPage) => {
     if (nextPage === currentPage) {
       return
@@ -216,13 +285,13 @@ function App() {
 
   const navigateToCategory = (category) => {
     setSelectedProductId(null)
-    setActiveFilterPage(null)
     setActiveCategory(category)
     setIsCategoryScoped(true)
     setSelectedImage('')
     setSelectedColor('')
     setSelectedSize('')
     setQuantity(1)
+    setActiveInfoPage(null)
     setIsMenuOpen(false)
     setIsCartOpen(false)
     setIsReviewOpen(false)
@@ -242,13 +311,13 @@ function App() {
 
   const goHome = () => {
     setSelectedProductId(null)
-    setActiveFilterPage(null)
     setActiveCategory(defaultCategory)
     setIsCategoryScoped(false)
     setSelectedImage('')
     setSelectedColor('')
     setSelectedSize('')
     setQuantity(1)
+    setActiveInfoPage(null)
     setIsMenuOpen(false)
     setIsCartOpen(false)
     setIsReviewOpen(false)
@@ -257,18 +326,58 @@ function App() {
     scrollToTop()
   }
 
+  const resetLoginDraft = (nextPhone = '') => {
+    setAuthView('login')
+    setLoginStep('phone')
+    setPhoneNumber(nextPhone)
+    setOtpDigits(['', '', '', ''])
+    setGeneratedOtp('')
+  }
+
   const openLoginModal = () => {
+    resetLoginDraft(accountProfile?.phone || '')
+    setLoginError('')
+    setLoginMessage(
+      accountProfile?.phone
+        ? `Use your registered number ${maskPhoneNumber(accountProfile.phone)} to continue.`
+        : 'Enter your mobile number to continue with secure sign in.',
+    )
+
+    setIsMenuOpen(false)
+    setIsLoginOpen(true)
+  }
+
+  const openSignupModal = () => {
+    setAuthView('signup')
     setLoginStep('phone')
     setPhoneNumber('')
     setOtpDigits(['', '', '', ''])
     setGeneratedOtp('')
     setLoginError('')
-    setLoginMessage(
-      isLoggedIn
-        ? `Signed in as ${accountPhone}. Enter another number if you want to switch account.`
-        : 'Enter your mobile number to continue with secure sign in.',
+    setLoginMessage('Fill your details below and create your Aryass account.')
+    setAccountForm(
+      accountProfile && !accountProfile.isGuest
+        ? {
+            fullName: accountProfile.fullName,
+            email: accountProfile.email === 'Not added yet' ? '' : accountProfile.email,
+            phone: accountProfile.phone,
+            city: accountProfile.city === 'Not shared yet' ? '' : accountProfile.city,
+          }
+        : emptyAccountForm,
     )
 
+    setIsMenuOpen(false)
+    setIsLoginOpen(true)
+  }
+
+  const openProfileModal = () => {
+    if (!isLoggedIn) {
+      openLoginModal()
+      return
+    }
+
+    setAuthView('profile')
+    setLoginError('')
     setIsMenuOpen(false)
     setIsLoginOpen(true)
   }
@@ -278,16 +387,38 @@ function App() {
     setLoginError('')
   }
 
+  const handleAccountTrigger = () => {
+    if (isLoggedIn) {
+      openProfileModal()
+      return
+    }
+
+    openLoginModal()
+  }
+
+  const handleHeaderAuthAction = () => {
+    if (isLoggedIn) {
+      setIsLoggedIn(false)
+      setIsLoginOpen(false)
+      setLoginError('')
+      setLoginMessage('You have been signed out.')
+      resetLoginDraft(accountProfile?.phone || '')
+      return
+    }
+
+    openLoginModal()
+  }
+
   const openProduct = (product, initialSelection = {}) => {
     setSelectedProductId(product.id)
     setSelectedImage(product.gallery[0])
     setSelectedColor(initialSelection.color || product.colors[0] || '')
     setSelectedSize(getDefaultSize(product, initialSelection.size))
     setQuantity(1)
-    setActiveFilterPage(null)
     setIsMenuOpen(false)
     setIsCartOpen(false)
     setIsReviewOpen(false)
+    setActiveInfoPage(null)
     scrollToTop()
   }
 
@@ -296,28 +427,29 @@ function App() {
     setIsReviewOpen(false)
   }
 
-  const openSizeFilterPage = () => {
-    setSelectedProductId(null)
+  const openFooterPage = (pageId) => {
+    setActiveInfoPage(pageId)
     setIsMenuOpen(false)
-    setActiveFilterPage('size')
+    setIsCartOpen(false)
+    setIsReviewOpen(false)
+    setIsLoginOpen(false)
     scrollToTop()
   }
 
-  const openPriceFilterPage = () => {
-    setSelectedProductId(null)
-    setIsMenuOpen(false)
-    setActiveFilterPage('price')
+  const closePolicyPage = () => {
+    setActiveInfoPage(null)
     scrollToTop()
   }
 
-  const closeSizeFilterPage = () => {
-    setActiveFilterPage(null)
-    scrollToTop()
-  }
+  const handleFooterLinkClick = (label) => {
+    const targetPage = getFooterPageForLabel(label)
 
-  const closePriceFilterPage = () => {
-    setActiveFilterPage(null)
-    scrollToTop()
+    if (targetPage) {
+      openFooterPage(targetPage.id)
+      return
+    }
+
+    goHome()
   }
 
   const toggleFilterSize = (label) => {
@@ -639,7 +771,13 @@ function App() {
         </div>
       </div>
 
-      {selectedProduct ? (
+      {activeFooterPage ? (
+        <FooterPage
+          page={activeFooterPage}
+          onBack={closePolicyPage}
+          onContinueShopping={goHome}
+        />
+      ) : selectedProduct ? (
         <ProductDetailPage
           product={selectedProduct}
           onAddToCart={addToCart}
@@ -655,27 +793,9 @@ function App() {
           onChooseOption={openProduct}
           relatedProducts={relatedProducts}
           onOpenReview={openReview}
+          onOpenShippingPolicy={() => openFooterPage(FOOTER_PAGE_IDS.shippingPolicy)}
+          onOpenReturnPolicy={() => openFooterPage(FOOTER_PAGE_IDS.returnsExchanges)}
           reviewCount={reviews.length}
-        />
-      ) : activeFilterPage === 'size' ? (
-        <SizeFilterPage
-          sizeOptions={sizeFilterOptions}
-          selectedSizes={selectedFilterSizes}
-          filteredCount={filteredProducts.length}
-          onToggleSize={toggleFilterSize}
-          onReset={resetCollectionFilters}
-          onBack={closeSizeFilterPage}
-        />
-      ) : activeFilterPage === 'price' ? (
-        <PriceFilterPage
-          highestPrice={highestVisiblePrice}
-          minPriceInput={minPriceInput}
-          maxPriceInput={maxPriceInput}
-          filteredCount={filteredProducts.length}
-          onMinPriceChange={handleMinPriceChange}
-          onMaxPriceChange={handleMaxPriceChange}
-          onReset={resetCollectionFilters}
-          onBack={closePriceFilterPage}
         />
       ) : (
         <CollectionPage
@@ -689,10 +809,15 @@ function App() {
           selectedFilterSizes={selectedFilterSizes}
           minPriceInput={minPriceInput}
           maxPriceInput={maxPriceInput}
+          sizeOptions={sizeFilterOptions}
+          highestPrice={highestVisiblePrice}
           productCount={filteredProducts.length}
           products={paginatedProducts}
-          onOpenSizeFilter={openSizeFilterPage}
-          onOpenPriceFilter={openPriceFilterPage}
+          onToggleSize={toggleFilterSize}
+          onMinPriceChange={handleMinPriceChange}
+          onMaxPriceChange={handleMaxPriceChange}
+          onClearSizeFilters={clearSizeFilters}
+          onClearPriceFilters={clearPriceFilters}
           onChooseOption={openProduct}
           onOpenLoginModal={openLoginModal}
           onClearFilters={resetCollectionFilters}
@@ -720,19 +845,29 @@ function App() {
 
         <div className="footer-column">
           <h3>Shop</h3>
-          {shopLinks.map((link) => (
-            <a key={link} href="#collection" onClick={goHome}>
+          {mobileMenuItems.map((link) => (
+            <button
+              key={link}
+              type="button"
+              className="footer-link-button"
+              onClick={() => handleMenuCategorySelect(link)}
+            >
               {link}
-            </a>
+            </button>
           ))}
         </div>
 
         <div className="footer-column">
           <h3>Quick Links</h3>
           {quickLinks.map((link) => (
-            <a key={link} href="#collection" onClick={goHome}>
+            <button
+              key={link}
+              type="button"
+              className="footer-link-button"
+              onClick={() => handleFooterLinkClick(link)}
+            >
               {link}
-            </a>
+            </button>
           ))}
         </div>
 
@@ -746,14 +881,21 @@ function App() {
 
       <div className="footer-legal">
         <p>
-          (c) 2026, Aryass. Refund policy | Privacy policy | Terms of service | Shipping
-          policy | Contact information
+          (c) 2026, Aryass.
+          {' '}
+          {footerLegalLinks.map((link, index) => (
+            <span key={link}>
+              {index ? ' | ' : ''}
+              <button
+                type="button"
+                className="footer-legal-button"
+                onClick={() => handleFooterLinkClick(link)}
+              >
+                {link}
+              </button>
+            </span>
+          ))}
         </p>
-      </div>
-
-      <div className="live-chat">
-        <strong>Live Video Call</strong>
-        <span>Open now | Till 7:30 PM</span>
       </div>
 
       <div className={`cart-overlay ${isCartOpen ? 'show' : ''}`} onClick={() => setIsCartOpen(false)} />

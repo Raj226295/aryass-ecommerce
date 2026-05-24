@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from 'react'
 import ProductCard from './ProductCard'
 import Icon from './Icon'
+import { formatPriceValue } from '../data/catalog'
 
 function CollectionPage({
   activeCategory,
@@ -12,10 +14,15 @@ function CollectionPage({
   selectedFilterSizes,
   minPriceInput,
   maxPriceInput,
+  sizeOptions,
+  highestPrice,
   productCount,
   products,
-  onOpenSizeFilter,
-  onOpenPriceFilter,
+  onToggleSize,
+  onMinPriceChange,
+  onMaxPriceChange,
+  onClearSizeFilters,
+  onClearPriceFilters,
   onChooseOption,
   onOpenLoginModal,
   onClearFilters,
@@ -25,8 +32,41 @@ function CollectionPage({
   totalPages,
   onPageChange,
 }) {
+  const [openFilter, setOpenFilter] = useState(null)
   const hasActiveFilters = selectedFilterSizes.length > 0 || minPriceInput || maxPriceInput
   const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1)
+  const filterGroupRef = useRef(null)
+  const popupFilters = new Set(['Rs', 'Size'])
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!filterGroupRef.current?.contains(event.target)) {
+        setOpenFilter(null)
+      }
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setOpenFilter(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
+
+  useEffect(() => {
+    setOpenFilter(null)
+  }, [collectionTitle])
+
+  const toggleFilterPopover = (filter) => {
+    setOpenFilter((currentFilter) => (currentFilter === filter ? null : filter))
+  }
 
   return (
     <main className="collection-page" id="collection">
@@ -91,26 +131,120 @@ function CollectionPage({
       </section>
 
       <section className="toolbar-row">
-        <div className="filter-group">
+        <div className="filter-group" ref={filterGroupRef}>
           <span>Filter:</span>
-          {filters.map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              className={`toolbar-chip ${
-                (filter === 'Size' && selectedFilterSizes.length) ||
-                (filter === 'Rs' && (minPriceInput || maxPriceInput))
-                  ? 'is-active'
-                  : ''
-              }`}
-              onClick={filter === 'Size' ? onOpenSizeFilter : onOpenPriceFilter}
-            >
-              {filter === 'Size' && selectedFilterSizes.length
-                ? `Size (${selectedFilterSizes.length})`
-                : filter}
-              <Icon name="chevron" />
-            </button>
-          ))}
+          {filters.map((filter) => {
+            const supportsPopup = popupFilters.has(filter)
+            const isActive =
+              (filter === 'Size' && selectedFilterSizes.length) ||
+              (filter === 'Rs' && (minPriceInput || maxPriceInput))
+
+            return (
+              <div
+                key={filter}
+                className={`filter-chip-wrap ${openFilter === filter ? 'is-open' : ''}`}
+              >
+              <button
+                type="button"
+                className={`toolbar-chip ${isActive ? 'is-active' : ''}`}
+                aria-expanded={supportsPopup ? openFilter === filter : undefined}
+                onClick={() => {
+                  if (!supportsPopup) {
+                    return
+                  }
+
+                  toggleFilterPopover(filter)
+                }}
+              >
+                {filter === 'Size' && selectedFilterSizes.length
+                  ? `Size (${selectedFilterSizes.length})`
+                  : filter}
+                <Icon name="chevron" />
+              </button>
+
+              {popupFilters.has(filter) && openFilter === filter ? (
+                filter === 'Size' ? (
+                  <div
+                    className="filter-popover filter-popover--size"
+                    role="dialog"
+                    aria-label="Size filter"
+                  >
+                    <div className="filter-popover__head">
+                      <strong>{selectedFilterSizes.length} selected</strong>
+                      <button
+                        type="button"
+                        className="filter-popover__reset"
+                        onClick={onClearSizeFilters}
+                        disabled={!selectedFilterSizes.length}
+                      >
+                        Reset
+                      </button>
+                    </div>
+
+                    <div className="filter-popover__list">
+                      {sizeOptions.map((option) => {
+                        const isChecked = selectedFilterSizes.includes(option.label)
+
+                        return (
+                          <label key={option.label} className="filter-popover__option">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => onToggleSize(option.label)}
+                            />
+                            <span>
+                              {option.label} ({option.count})
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="filter-popover filter-popover--price" role="dialog" aria-label="Price filter">
+                    <div className="filter-popover__head">
+                      <strong>The highest price is {formatPriceValue(highestPrice)}</strong>
+                      <button
+                        type="button"
+                        className="filter-popover__reset"
+                        onClick={onClearPriceFilters}
+                        disabled={!minPriceInput && !maxPriceInput}
+                      >
+                        Reset
+                      </button>
+                    </div>
+
+                    <div className="filter-popover__price-grid">
+                      <label className="filter-popover__currency-field">
+                        <span>&#8377;</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="From"
+                          value={minPriceInput}
+                          onChange={(event) => onMinPriceChange(event.target.value)}
+                          aria-label="Minimum price"
+                        />
+                      </label>
+
+                      <label className="filter-popover__currency-field">
+                        <span>&#8377;</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="To"
+                          value={maxPriceInput}
+                          onChange={(event) => onMaxPriceChange(event.target.value)}
+                          aria-label="Maximum price"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )
+              ) : null}
+              </div>
+            )
+          })}
         </div>
 
         <div className="sort-group">
