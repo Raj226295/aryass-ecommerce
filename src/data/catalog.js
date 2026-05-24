@@ -293,6 +293,90 @@ const shortsOfferSlides = [
   },
 ]
 
+const accessoriesOfferSlides = [
+  {
+    id: 'accessories-jewel',
+    label: 'Accessories Spotlight',
+    title: 'Jewellery And Add-ons Starting At Rs. 899',
+    code: 'ACC10',
+    description:
+      'Necklaces, bracelets, earrings, bags, aur finishing pieces ko ab dedicated Accessories collection me separate spotlight diya gaya hai.',
+    stats: [
+      { value: '13', label: 'New picks' },
+      { value: '10%', label: 'Code ready' },
+      { value: 'Finish', label: 'The look' },
+    ],
+  },
+  {
+    id: 'accessories-stack',
+    label: 'Stack And Style',
+    title: 'Buy Any 2 Accessories And Save 9%',
+    code: 'STACK9',
+    description:
+      'Bracelet stacks, statement chains, aur occasion add-ons ko pair karke smart extras save karo.',
+    stats: [
+      { value: '2', label: 'Pieces' },
+      { value: '9%', label: 'Combo off' },
+      { value: 'Curated', label: 'Styling' },
+    ],
+  },
+  {
+    id: 'accessories-premium',
+    label: 'Premium Finish',
+    title: 'Flat 12% Off Above Rs. 2,499',
+    code: 'ACC12',
+    description:
+      'Premium accessories basket par spend badhane ke saath dedicated category offer unlock hota hai.',
+    stats: [
+      { value: '12%', label: 'Extra off' },
+      { value: '2499+', label: 'Spend value' },
+      { value: 'Luxe', label: 'Finish' },
+    ],
+  },
+]
+
+const coordSetOfferSlides = [
+  {
+    id: 'coord-spotlight',
+    label: 'Co ord Spotlight',
+    title: 'Matching Sets Starting At Rs. 1,999',
+    code: 'COORD10',
+    description:
+      'Printed, structured, beach-ready, aur statement matching looks ko ab dedicated Co ord set collection me separate place diya gaya hai.',
+    stats: [
+      { value: '12', label: 'Set looks' },
+      { value: '10%', label: 'Code ready' },
+      { value: 'Match', label: 'Made easy' },
+    ],
+  },
+  {
+    id: 'coord-pair',
+    label: 'Set Pairing',
+    title: 'Buy Any 2 Co ord Sets And Save 10%',
+    code: 'PAIRCOORD',
+    description:
+      'Day co ords aur occasion matching sets ko pair karke wardrobe ko quick upgrade do.',
+    stats: [
+      { value: '2', label: 'Sets' },
+      { value: '10%', label: 'Combo off' },
+      { value: 'Fast', label: 'Styling' },
+    ],
+  },
+  {
+    id: 'coord-premium',
+    label: 'Premium Matching Looks',
+    title: 'Flat 12% Off Above Rs. 3,999',
+    code: 'SET12',
+    description:
+      'Premium co ord basket par spend badhane ke saath bigger dedicated category offer unlock hota hai.',
+    stats: [
+      { value: '12%', label: 'Extra off' },
+      { value: '3999+', label: 'Spend value' },
+      { value: 'Easy', label: 'Polish' },
+    ],
+  },
+]
+
 export function getOfferSlidesForCategory(category, isLandingView = false) {
   if (isLandingView) {
     return sharedOfferSlides
@@ -312,6 +396,14 @@ export function getOfferSlidesForCategory(category, isLandingView = false) {
 
   if (category === 'Shorts') {
     return shortsOfferSlides
+  }
+
+  if (category === 'Accessories') {
+    return accessoriesOfferSlides
+  }
+
+  if (category === 'Co ord set') {
+    return coordSetOfferSlides
   }
 
   return sharedOfferSlides
@@ -436,6 +528,37 @@ const shortCatalogImages = [
   '/short/pexels-photo-12580999.jpg',
   '/short/pexels-photo-35735719.jpeg',
   '/short/pexels-photo-6675408.jpeg',
+]
+
+const accessoriesCatalogImages = [
+  '/accessories/pexels-photo-34365839.jpeg',
+  '/accessories/pexels-photo-13155692.jpeg',
+  '/accessories/pexels-photo-34459671.jpeg',
+  '/accessories/pexels-photo-8706563.jpeg',
+  '/accessories/pexels-photo-11955680.jpg',
+  '/accessories/pexels-photo-37401976.jpeg',
+  '/accessories/pexels-photo-18699687.jpeg',
+  '/accessories/pexels-photo-29486075.jpeg',
+  '/accessories/pexels-photo-11794593.jpeg',
+  '/accessories/pexels-photo-37401770.jpeg',
+  '/accessories/pexels-photo-34505711.jpeg',
+  '/accessories/pexels-photo-37401695.jpeg',
+  '/accessories/pexels-photo-29486063.jpeg',
+]
+
+const coordSetCatalogImages = [
+  '/coord-set/pexels-photo-18647991.jpeg',
+  '/coord-set/pexels-photo-14656903.jpeg',
+  '/coord-set/pexels-photo-37520908.jpeg',
+  '/coord-set/pexels-photo-17065368.jpeg',
+  '/coord-set/pexels-photo-16362937.jpeg',
+  '/coord-set/pexels-photo-14656905.jpeg',
+  '/coord-set/pexels-photo-13067404.jpeg',
+  '/coord-set/pexels-photo-17065365.webp',
+  '/coord-set/pexels-photo-32809976.jpeg',
+  '/coord-set/pexels-photo-34624499.jpeg',
+  '/coord-set/pexels-photo-12958683.jpeg',
+  '/coord-set/pexels-photo-12131621.jpeg',
 ]
 
 const coreProducts = [
@@ -650,6 +773,37 @@ const shortProductNames = [
   'Classic Contrast Mini',
 ]
 
+const accessoriesProductNames = [
+  'Charm Necklace Stand',
+  'Luxe Watch Stack',
+  'Evening Chain Display',
+  'Gold Layer Chain',
+  'Mini Bag Edit',
+  'Bracelet Stack Set',
+  'Storefront Accessory Edit',
+  'Crystal Earring Tray',
+  'Occasion Sandal Set',
+  'Chevron Bracelet Stack',
+  'Minimal Necklace Display',
+  'Signature Wrist Stack',
+  'Curated Jewellery Tray',
+]
+
+const coordSetProductNames = [
+  'Floral Lounge Co ord',
+  'Indigo Tailored Co ord',
+  'Abstract Resort Co ord',
+  'Monochrome Night Co ord',
+  'Mint Garden Co ord',
+  'Cobalt Ease Co ord',
+  'Pearl Drift Co ord',
+  'Graphite Pattern Co ord',
+  'Midnight Wide-Leg Co ord',
+  'Pink Shore Co ord',
+  'Blue Paisley Co ord',
+  'Gingham Mini Co ord',
+]
+
 const dressColorSets = [
   ['Baby Pink', 'Champagne', 'Pearl White'],
   ['Lilac', 'Black', 'Rose Gold'],
@@ -710,6 +864,24 @@ const shortColorSets = [
   ['Olive', 'Khaki', 'Sand'],
 ]
 
+const accessoriesColorSets = [
+  ['Gold', 'Ivory', 'Champagne'],
+  ['Silver', 'Teal', 'Amber'],
+  ['Charcoal', 'Silver', 'Pearl'],
+  ['Gold', 'Bronze', 'Ivory'],
+  ['Tan', 'Cream', 'Chestnut'],
+  ['Rose Gold', 'Red', 'Gold'],
+]
+
+const coordSetColorSets = [
+  ['Floral Cream', 'Sage', 'Sunflower'],
+  ['Cobalt', 'Navy', 'Steel Blue'],
+  ['Mint', 'Orange', 'Sky Blue'],
+  ['Black', 'Ivory', 'Stone'],
+  ['Powder Blue', 'White', 'Mint'],
+  ['Silver Grey', 'Pearl', 'Ash'],
+]
+
 const productSizeSets = [
   ['XS', 'S', 'M', 'L'],
   ['S', 'M', 'L', 'XL'],
@@ -755,6 +927,14 @@ function getImagePoolForCategory(category) {
     return shortCatalogImages
   }
 
+  if (category === 'Accessories') {
+    return accessoriesCatalogImages
+  }
+
+  if (category === 'Co ord set') {
+    return coordSetCatalogImages
+  }
+
   return dressCatalogImages
 }
 
@@ -773,6 +953,14 @@ function getColorSetsForCategory(category) {
 
   if (category === 'Shorts') {
     return shortColorSets
+  }
+
+  if (category === 'Accessories') {
+    return accessoriesColorSets
+  }
+
+  if (category === 'Co ord set') {
+    return coordSetColorSets
   }
 
   return dressColorSets
@@ -932,12 +1120,52 @@ const shortProducts = shortProductNames.map((name, index) =>
   }),
 )
 
+const accessoriesProducts = accessoriesProductNames.map((name, index) =>
+  createProductRecord({
+    name,
+    price: formatCatalogPrice(899 + (index % 5) * 160 + Math.floor(index / 5) * 110),
+    oldPrice:
+      index % 4 === 0 ? formatCatalogPrice(1199 + (index % 3) * 180) : undefined,
+    category: 'Accessories',
+    index,
+    imagePool: accessoriesCatalogImages,
+    colorSets: accessoriesColorSets,
+    soldOut: index % 7 === 0,
+    rating: index % 2 === 0 ? 5 : index % 5 === 0 ? 4 : 0,
+    reviews: index % 2 === 0 ? 4 + (index % 4) : index % 5 === 0 ? 2 + (index % 3) : 0,
+    asSeenOn: index % 3 === 0,
+    label: index % 2 === 0 ? 'Accessories Edit' : undefined,
+    idPrefix: 'aryass-accessory',
+  }),
+)
+
+const coordSetProducts = coordSetProductNames.map((name, index) =>
+  createProductRecord({
+    name,
+    price: formatCatalogPrice(1999 + (index % 5) * 240 + Math.floor(index / 5) * 120),
+    oldPrice:
+      index % 4 === 0 ? formatCatalogPrice(2399 + (index % 3) * 220) : undefined,
+    category: 'Co ord set',
+    index,
+    imagePool: coordSetCatalogImages,
+    colorSets: coordSetColorSets,
+    soldOut: index % 7 === 0,
+    rating: index % 2 === 0 ? 5 : index % 5 === 0 ? 4 : 0,
+    reviews: index % 2 === 0 ? 5 + (index % 5) : index % 5 === 0 ? 3 + (index % 3) : 0,
+    asSeenOn: index % 3 === 0,
+    label: index % 2 === 0 ? 'Co ord Highlight' : undefined,
+    idPrefix: 'aryass-coord',
+  }),
+)
+
 export const products = [
   ...generalProducts,
   ...shirtProducts,
   ...topProducts,
   ...pantsProducts,
   ...shortProducts,
+  ...accessoriesProducts,
+  ...coordSetProducts,
 ]
 
 export function formatPrice(price) {
