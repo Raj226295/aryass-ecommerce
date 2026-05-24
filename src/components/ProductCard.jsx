@@ -1,3 +1,5 @@
+import { formatPrice } from '../data/catalog'
+
 function ProductCard({ product, onChooseOption }) {
   return (
     <article className="product-card">
@@ -19,15 +21,15 @@ function ProductCard({ product, onChooseOption }) {
 
         {product.rating ? (
           <p className="rating-row">
-            {'★'.repeat(product.rating)} <span>({product.reviews})</span>
+            {'\u2605'.repeat(product.rating)} <span>({product.reviews})</span>
           </p>
         ) : (
           <div className="rating-row rating-row--spacer" aria-hidden="true" />
         )}
 
         <p className="price-row">
-          {product.oldPrice ? <span className="old-price">Rs. {product.oldPrice}</span> : null}
-          <span>Rs. {product.price}</span>
+          {product.oldPrice ? <span className="old-price">{formatPrice(product.oldPrice)}</span> : null}
+          <span>{formatPrice(product.price)}</span>
         </p>
       </div>
 
@@ -39,4 +41,3 @@ function ProductCard({ product, onChooseOption }) {
 }
 
 export default ProductCard
-

@@ -33,25 +33,54 @@
 }
 
 .social-strip a,
-.footer-socials a {
+.footer-socials a,
+.drawer-socials a {
   color: inherit;
   text-decoration: none;
 }
 
-/* Make FB/Instagram/Youtube icons white */
-.social-strip svg,
-.footer-socials svg {
+.social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transition:
+    background-color 0.24s ease,
+    transform 0.24s ease;
+}
+
+.social-link:hover,
+.social-link:focus-visible {
+  transform: translateY(-1px);
+}
+
+.social-strip .social-link,
+.footer-socials .social-link {
   color: #ffffff;
 }
 
-/* Fix YouTube icon looking odd: override SVG fill behavior */
-.social-strip svg[viewBox="0 0 24 24"],
-.footer-socials svg[viewBox="0 0 24 24"] {
-  fill: #ffffff;
+.social-strip .social-link:hover,
+.social-strip .social-link:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.footer-socials .social-link:hover,
+.footer-socials .social-link:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.drawer-socials .social-link {
+  color: #171615;
+}
+
+.drawer-socials .social-link:hover,
+.drawer-socials .social-link:focus-visible {
+  background: rgba(23, 21, 20, 0.08);
 }
 
 .social-strip svg,
 .footer-socials svg,
+.drawer-socials svg,
 .header-icon svg,
 .toolbar-chip svg,
 .pagination svg,
@@ -228,6 +257,9 @@ z-index: 100;
 }
 
 .drawer-backdrop{
+  z-index: 9999;
+position: fixed;
+inset: 0;
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.45);
@@ -249,13 +281,16 @@ z-index: 100;
 .drawer-backdrop {
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
   transition: opacity 0.28s ease;
 }
 
 .drawer-backdrop.is-visible {
   opacity: 1;
-   visibility: visible;
+  visibility: visible;
+  pointer-events: auto;
 }
+
 
 
 .mobile-drawer {
@@ -405,7 +440,6 @@ will-change: transform;
   justify-content: center;
   width: 1.8rem;
   height: 1.8rem;
-  color: #171615;
 }
 
 .drawer-socials svg {
@@ -425,7 +459,33 @@ will-change: transform;
   padding: 0 0 4rem;
 }
 
+.collection-empty-state {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.75rem;
+  border: 1px solid #ece8e1;
+  border-radius: 1.35rem;
+  background: #faf7f1;
+}
+
+.collection-empty-state h2,
+.collection-empty-state p {
+  margin: 0;
+}
+
+.collection-empty-state h2 {
+  font-family: var(--serif);
+  font-size: clamp(1.7rem, 3vw, 2.2rem);
+  font-weight: 500;
+}
+
+.collection-empty-state p:last-of-type {
+  color: #62574d;
+}
+
 .offer-slider-section {
+  position: relative;
+z-index: 1;
   padding: 2rem 0 2.4rem;
 }
 
@@ -974,6 +1034,7 @@ max-height:100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 1rem;
   padding: 2.2rem 0 3.5rem;
 }
@@ -990,6 +1051,11 @@ max-height:100%;
 
 .pagination button.is-active {
   border-bottom-color: #1b1a18;
+}
+
+.pagination button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .login-callout {
@@ -1712,25 +1778,26 @@ max-height:100%;
 }
 
 @media (min-width: 961px) {
-  /* desktop par drawer/backdrop hide */
+  /* Keep the visible header menu usable on desktop widths too. */
   .mobile-drawer,
   .drawer-backdrop {
-    display: none;
-    z-index: 998;
+    display: block;
   }
 }
 
 /* Ensure cart overlay doesn't block menu clicks */
 .cart-overlay {
   pointer-events: none;
-  /* hidden by default to avoid layout/hover quirks */
   opacity: 0;
   visibility: hidden;
 }
 
+/* When cart is open, only cart overlay should be clickable (menu backdrop should still work) */
 .cart-overlay.show {
   pointer-events: auto;
+  z-index: 100;
 }
+
 
 
 
@@ -1921,6 +1988,9 @@ max-height:100%;
   }
 
   .header-icon {
+    position: relative;
+z-index: 9999;
+cursor: pointer;
     width: 2.45rem;
     height: 2.45rem;
   }
@@ -2443,5 +2513,11 @@ margin-top:20px;
 }
 /* Pointer-events fix:
    Mobile drawer must remain clickable when open. Avoid restricting clicks by breakpoint. */
-.mobile-drawer { pointer-events: auto; }
+.mobile-drawer { 
+  pointer-events: auto;
+  z-index: 99999;
+position: fixed;
+top: 0;
+left: 0; 
 
+}
