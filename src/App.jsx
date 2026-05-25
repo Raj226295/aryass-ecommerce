@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import CollectionPage from './components/CollectionPage'
+import CheckoutModal from './components/CheckoutModal'
 import FooterPage from './components/FooterPage'
 import Icon from './components/Icon'
 import LoginModal from './components/LoginModal'
@@ -42,6 +43,17 @@ const emptyAccountForm = {
   email: '',
   phone: '',
   city: '',
+}
+
+const emptyDeliveryForm = {
+  fullName: '',
+  email: '',
+  phone: '',
+  addressLine: '',
+  landmark: '',
+  city: '',
+  state: '',
+  pincode: '',
 }
 
 const PAGE_SIZE = 16
@@ -89,6 +101,51 @@ function formatAccountPhone(phone = '') {
   return `+91 ${phone.slice(0, 5)} ${phone.slice(5)}`
 }
 
+function hasCompleteDeliveryDetails(details) {
+  return Boolean(
+    details?.fullName &&
+      details?.phone &&
+      details?.addressLine &&
+      details?.city &&
+      details?.state &&
+      details?.pincode,
+  )
+}
+
+function getDeliveryFormPrefill(savedDetails, account) {
+  return {
+    fullName: savedDetails?.fullName || account?.fullName || '',
+    email:
+      savedDetails?.email ||
+      (account?.email && account.email !== 'Not added yet' ? account.email : ''),
+    phone: savedDetails?.phone || account?.phone || '',
+    addressLine: savedDetails?.addressLine || '',
+    landmark: savedDetails?.landmark || '',
+    city:
+      savedDetails?.city ||
+      (account?.city && account.city !== 'Not shared yet' ? account.city : ''),
+    state: savedDetails?.state || '',
+    pincode: savedDetails?.pincode || '',
+  }
+}
+
+function buildDeliveryDetails(form) {
+  return {
+    fullName: form.fullName.trim(),
+    email: form.email.trim().toLowerCase(),
+    phone: normalizePhoneNumber(form.phone),
+    addressLine: form.addressLine.trim(),
+    landmark: form.landmark.trim(),
+    city: form.city.trim(),
+    state: form.state.trim(),
+    pincode: form.pincode.replace(/\D/g, '').slice(0, 6),
+  }
+}
+
+function createOrderId() {
+  return `ARY${Date.now().toString().slice(-6)}`
+}
+
 function getDefaultSize(product, preferredSize = '') {
   if (preferredSize && product.sizes.some((size) => size.label === preferredSize)) {
     return preferredSize
@@ -126,6 +183,15 @@ function App() {
   const [isCategoryScoped, setIsCategoryScoped] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [cartItems, setCartItems] = useState([])
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [checkoutStep, setCheckoutStep] = useState('delivery')
+  const [checkoutSource, setCheckoutSource] = useState('buy-now')
+  const [checkoutItems, setCheckoutItems] = useState([])
+  const [deliveryForm, setDeliveryForm] = useState(emptyDeliveryForm)
+  const [savedDeliveryDetails, setSavedDeliveryDetails] = useState(null)
+  const [checkoutError, setCheckoutError] = useState('')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi')
+  const [checkoutOrderId, setCheckoutOrderId] = useState('')
   const [reviews, setReviews] = useState([])
   const [isReviewOpen, setIsReviewOpen] = useState(false)
   const [reviewData, setReviewData] = useState(emptyReviewData)
@@ -177,10 +243,12 @@ function App() {
     : []
   const cartItemCount = cartItems.reduce((total, item) => total + item.qty, 0)
   const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0)
+  const checkoutTotal = checkoutItems.reduce((sum, item) => sum + item.price * item.qty, 0)
   const currentMessage = announcementMessages[activeMessage]
   const activeFooterPage = activeInfoPage ? getFooterPageById(activeInfoPage) : null
   const signedInLabel =
     accountProfile?.fullName || (accountProfile?.phone ? maskPhoneNumber(accountProfile.phone) : '')
+  const hasSavedDelivery = hasCompleteDeliveryDetails(savedDeliveryDetails)
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -220,6 +288,7 @@ function App() {
         setIsMenuOpen(false)
         setIsLoginOpen(false)
         setIsCartOpen(false)
+        setIsCheckoutOpen(false)
         setIsReviewOpen(false)
         setActiveInfoPage(null)
       }
@@ -235,12 +304,12 @@ function App() {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow =
-      isMenuOpen || isLoginOpen || isCartOpen || isReviewOpen ? 'hidden' : ''
+      isMenuOpen || isLoginOpen || isCartOpen || isCheckoutOpen || isReviewOpen ? 'hidden' : ''
 
     return () => {
       document.body.style.overflow = previousOverflow
     }
-  }, [isCartOpen, isLoginOpen, isMenuOpen, isReviewOpen])
+  }, [isCartOpen, isCheckoutOpen, isLoginOpen, isMenuOpen, isReviewOpen])
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -294,6 +363,7 @@ function App() {
     setActiveInfoPage(null)
     setIsMenuOpen(false)
     setIsCartOpen(false)
+    setIsCheckoutOpen(false)
     setIsReviewOpen(false)
     setActiveOffer(0)
     resetCollectionFilters()
@@ -320,6 +390,7 @@ function App() {
     setActiveInfoPage(null)
     setIsMenuOpen(false)
     setIsCartOpen(false)
+    setIsCheckoutOpen(false)
     setIsReviewOpen(false)
     setActiveOffer(0)
     resetCollectionFilters()
@@ -344,6 +415,9 @@ function App() {
     )
 
     setIsMenuOpen(false)
+    setIsCartOpen(false)
+    setIsCheckoutOpen(false)
+    setIsReviewOpen(false)
     setIsLoginOpen(true)
   }
 
@@ -367,6 +441,9 @@ function App() {
     )
 
     setIsMenuOpen(false)
+    setIsCartOpen(false)
+    setIsCheckoutOpen(false)
+    setIsReviewOpen(false)
     setIsLoginOpen(true)
   }
 
@@ -379,6 +456,9 @@ function App() {
     setAuthView('profile')
     setLoginError('')
     setIsMenuOpen(false)
+    setIsCartOpen(false)
+    setIsCheckoutOpen(false)
+    setIsReviewOpen(false)
     setIsLoginOpen(true)
   }
 
@@ -396,13 +476,20 @@ function App() {
     openLoginModal()
   }
 
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    setIsLoginOpen(false)
+    setIsCartOpen(false)
+    setIsCheckoutOpen(false)
+    setIsReviewOpen(false)
+    setLoginError('')
+    setLoginMessage('You have been signed out.')
+    resetLoginDraft(accountProfile?.phone || '')
+  }
+
   const handleHeaderAuthAction = () => {
     if (isLoggedIn) {
-      setIsLoggedIn(false)
-      setIsLoginOpen(false)
-      setLoginError('')
-      setLoginMessage('You have been signed out.')
-      resetLoginDraft(accountProfile?.phone || '')
+      handleLogout()
       return
     }
 
@@ -417,6 +504,7 @@ function App() {
     setQuantity(1)
     setIsMenuOpen(false)
     setIsCartOpen(false)
+    setIsCheckoutOpen(false)
     setIsReviewOpen(false)
     setActiveInfoPage(null)
     scrollToTop()
@@ -431,6 +519,7 @@ function App() {
     setActiveInfoPage(pageId)
     setIsMenuOpen(false)
     setIsCartOpen(false)
+    setIsCheckoutOpen(false)
     setIsReviewOpen(false)
     setIsLoginOpen(false)
     scrollToTop()
@@ -466,10 +555,53 @@ function App() {
     setMaxPriceInput(value.replace(/\D/g, '').slice(0, 7))
   }
 
+  const handleAccountFormChange = (field, value) => {
+    setAccountForm((current) => ({
+      ...current,
+      [field]: field === 'phone' ? normalizePhoneNumber(value) : value,
+    }))
+    setLoginError('')
+  }
+
+  const handleCreateAccount = (event) => {
+    event.preventDefault()
+
+    const nextProfile = buildAccountProfileFromForm(accountForm)
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextProfile.email)
+
+    if (!nextProfile.fullName || nextProfile.fullName.length < 3) {
+      setLoginError('Please enter your full name.')
+      return
+    }
+
+    if (!isEmailValid) {
+      setLoginError('Please enter a valid email address.')
+      return
+    }
+
+    if (nextProfile.phone.length !== 10) {
+      setLoginError('Please enter a valid 10 digit mobile number.')
+      return
+    }
+
+    if (!nextProfile.city || nextProfile.city.length < 2) {
+      setLoginError('Please add your city so we can complete the profile.')
+      return
+    }
+
+    setAccountProfile(nextProfile)
+    setIsLoggedIn(true)
+    setLoginError('')
+    setLoginMessage(`Account created for ${nextProfile.fullName}.`)
+    setAccountForm(emptyAccountForm)
+    setIsLoginOpen(false)
+    resetLoginDraft(nextProfile.phone)
+  }
+
   const handlePhoneSubmit = (event) => {
     event.preventDefault()
 
-    const cleanedNumber = phoneNumber.replace(/\D/g, '').slice(0, 10)
+    const cleanedNumber = normalizePhoneNumber(phoneNumber)
 
     if (cleanedNumber.length !== 10) {
       setLoginError('Please enter a valid 10 digit mobile number.')
@@ -532,10 +664,145 @@ function App() {
       return
     }
 
+    const matchingAccount = accountProfile?.phone === phoneNumber ? accountProfile : null
+
     setIsLoggedIn(true)
-    setAccountPhone(maskPhoneNumber(phoneNumber))
+    setAccountProfile(matchingAccount || buildGuestProfile(phoneNumber))
     setLoginError('')
+    setLoginMessage(
+      matchingAccount
+        ? `Welcome back, ${matchingAccount.fullName}.`
+        : `Signed in with ${maskPhoneNumber(phoneNumber)}.`,
+    )
     setIsLoginOpen(false)
+    resetLoginDraft(phoneNumber)
+  }
+
+  const createCheckoutItem = (product, itemQuantity, color, size) => ({
+    id: product.id,
+    name: product.name,
+    price: Number(product.price.replace(/,/g, '')),
+    qty: itemQuantity,
+    size,
+    color,
+    image: product.image,
+  })
+
+  const closeCheckout = () => {
+    setIsCheckoutOpen(false)
+    setCheckoutError('')
+    setCheckoutStep('delivery')
+    setCheckoutOrderId('')
+  }
+
+  const openCheckout = (items, source) => {
+    if (!items.length) {
+      return
+    }
+
+    setCheckoutItems(items)
+    setCheckoutSource(source)
+    setSelectedPaymentMethod('upi')
+    setCheckoutOrderId('')
+    setCheckoutError('')
+    setDeliveryForm(getDeliveryFormPrefill(savedDeliveryDetails, accountProfile))
+    setCheckoutStep(hasSavedDelivery ? 'payment' : 'delivery')
+    setIsCartOpen(false)
+    setIsLoginOpen(false)
+    setIsReviewOpen(false)
+    setIsCheckoutOpen(true)
+  }
+
+  const openBuyNowCheckout = () => {
+    if (!selectedProduct) {
+      return
+    }
+
+    openCheckout(
+      [createCheckoutItem(selectedProduct, quantity, selectedColor, selectedSize)],
+      'buy-now',
+    )
+  }
+
+  const openCartCheckout = () => {
+    openCheckout(cartItems, 'cart')
+  }
+
+  const handleDeliveryFieldChange = (field, value) => {
+    setDeliveryForm((current) => ({
+      ...current,
+      [field]:
+        field === 'phone'
+          ? normalizePhoneNumber(value)
+          : field === 'pincode'
+            ? value.replace(/\D/g, '').slice(0, 6)
+            : value,
+    }))
+    setCheckoutError('')
+  }
+
+  const handleDeliverySubmit = (event) => {
+    event.preventDefault()
+
+    const nextDelivery = buildDeliveryDetails(deliveryForm)
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextDelivery.email)
+
+    if (!nextDelivery.fullName || nextDelivery.fullName.length < 3) {
+      setCheckoutError('Please enter the receiver full name.')
+      return
+    }
+
+    if (!isEmailValid) {
+      setCheckoutError('Please enter a valid delivery email address.')
+      return
+    }
+
+    if (nextDelivery.phone.length !== 10) {
+      setCheckoutError('Please enter a valid 10 digit mobile number.')
+      return
+    }
+
+    if (!nextDelivery.addressLine || nextDelivery.addressLine.length < 8) {
+      setCheckoutError('Please enter a complete street address.')
+      return
+    }
+
+    if (!nextDelivery.city || !nextDelivery.state) {
+      setCheckoutError('Please add your city and state.')
+      return
+    }
+
+    if (nextDelivery.pincode.length !== 6) {
+      setCheckoutError('Please enter a valid 6 digit pincode.')
+      return
+    }
+
+    setSavedDeliveryDetails(nextDelivery)
+    setDeliveryForm(getDeliveryFormPrefill(nextDelivery, accountProfile))
+    setCheckoutError('')
+    setCheckoutStep('payment')
+  }
+
+  const handleEditDelivery = () => {
+    setDeliveryForm(getDeliveryFormPrefill(savedDeliveryDetails, accountProfile))
+    setCheckoutError('')
+    setCheckoutStep('delivery')
+  }
+
+  const handlePlaceOrder = () => {
+    if (!hasCompleteDeliveryDetails(savedDeliveryDetails)) {
+      setCheckoutStep('delivery')
+      setCheckoutError('Please complete delivery details before payment.')
+      return
+    }
+
+    if (checkoutSource === 'cart') {
+      setCartItems([])
+    }
+
+    setCheckoutError('')
+    setCheckoutOrderId(createOrderId())
+    setCheckoutStep('success')
   }
 
   const handleQuantityChange = (change) => {
@@ -586,15 +853,7 @@ function App() {
     } else {
       setCartItems((current) => [
         ...current,
-        {
-          id: selectedProduct.id,
-          name: selectedProduct.name,
-          price: Number(selectedProduct.price.replace(/,/g, '')),
-          qty: quantity,
-          size: selectedSize,
-          color: selectedColor,
-          image: selectedProduct.image,
-        },
+        createCheckoutItem(selectedProduct, quantity, selectedColor, selectedSize),
       ])
     }
 
@@ -683,10 +942,19 @@ function App() {
         </a>
 
         <div className="header-side header-side--right">
-          <button type="button" className="header-login" onClick={openLoginModal}>
-            {isLoggedIn ? 'My Account' : 'Login'}
+          <button
+            type="button"
+            className={`header-login ${isLoggedIn ? 'header-login--logout' : ''}`}
+            onClick={handleHeaderAuthAction}
+          >
+            {isLoggedIn ? 'Logout' : 'Login'}
           </button>
-          <button type="button" className="header-icon" aria-label="Account" onClick={openLoginModal}>
+          <button
+            type="button"
+            className={`header-icon ${isLoggedIn ? 'header-icon--account-live' : ''}`}
+            aria-label={isLoggedIn ? 'Open profile' : 'Account'}
+            onClick={handleAccountTrigger}
+          >
             <Icon name="account" />
           </button>
           <button
@@ -756,7 +1024,7 @@ function App() {
               onClick={() => handleMenuCategorySelect(item)}
             >
               <span>{item}</span>
-              <Icon name="chevron" />
+              <Icon name="chevron" />   
             </a>
           ))}
         </nav>
@@ -781,6 +1049,7 @@ function App() {
         <ProductDetailPage
           product={selectedProduct}
           onAddToCart={addToCart}
+          onBuyNow={openBuyNowCheckout}
           selectedImage={selectedImage}
           selectedColor={selectedColor}
           selectedSize={selectedSize}
@@ -819,9 +1088,9 @@ function App() {
           onClearSizeFilters={clearSizeFilters}
           onClearPriceFilters={clearPriceFilters}
           onChooseOption={openProduct}
-          onOpenLoginModal={openLoginModal}
+          onOpenLoginModal={handleAccountTrigger}
           onClearFilters={resetCollectionFilters}
-          loginCtaLabel={isLoggedIn ? 'Open account' : 'Login'}
+          loginCtaLabel={isLoggedIn ? 'View profile' : 'Login'}
           emptyStateLabel={isCategoryScoped ? `${activeCategory.toLowerCase()} products` : 'products'}
           currentPage={currentPage}
           totalPages={totalPages}
@@ -875,7 +1144,7 @@ function App() {
           <h3>Our Achievements</h3>
           <p>Forbes Recognized</p>
           <p>Luxury edits made lighter for mobile browsing.</p>
-          {isLoggedIn ? <p>Signed in as {accountPhone}</p> : null}
+          {isLoggedIn ? <p>Signed in as {signedInLabel}</p> : null}
         </div>
       </footer>
 
@@ -970,9 +1239,36 @@ function App() {
             <h3>{formatPrice(totalPrice.toLocaleString('en-IN'))}</h3>
           </div>
 
-          <button className="checkout-btn">CHECKOUT</button>
+          <button
+            type="button"
+            className="checkout-btn"
+            onClick={openCartCheckout}
+            disabled={!cartItems.length}
+          >
+            CHECKOUT
+          </button>
         </div>
       </div>
+
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        step={checkoutStep}
+        items={checkoutItems}
+        total={checkoutTotal}
+        deliveryForm={deliveryForm}
+        deliveryDetails={savedDeliveryDetails}
+        selectedPaymentMethod={selectedPaymentMethod}
+        orderId={checkoutOrderId}
+        checkoutError={checkoutError}
+        hasSavedDeliveryDetails={hasSavedDelivery}
+        onClose={closeCheckout}
+        onDeliveryFieldChange={handleDeliveryFieldChange}
+        onSubmitDelivery={handleDeliverySubmit}
+        onEditDelivery={handleEditDelivery}
+        onSelectPaymentMethod={setSelectedPaymentMethod}
+        onPlaceOrder={handlePlaceOrder}
+        onContinueShopping={closeCheckout}
+      />
 
       {isReviewOpen ? (
         <div className="review-overlay" onClick={() => setIsReviewOpen(false)}>
@@ -1081,13 +1377,16 @@ function App() {
       <LoginModal
         isOpen={isLoginOpen}
         onClose={closeLoginModal}
+        authView={authView}
         loginStep={loginStep}
         phoneNumber={phoneNumber}
         otpDigits={otpDigits}
         loginError={loginError}
         loginMessage={loginMessage}
+        accountForm={accountForm}
+        accountProfile={accountProfile}
         onPhoneChange={(value) => {
-          setPhoneNumber(value.replace(/\D/g, '').slice(0, 10))
+          setPhoneNumber(normalizePhoneNumber(value))
           setLoginError('')
         }}
         onPhoneSubmit={handlePhoneSubmit}
@@ -1095,6 +1394,12 @@ function App() {
         onOtpChange={handleOtpChange}
         onOtpKeyDown={handleOtpKeyDown}
         onResendOtp={handleResendOtp}
+        onSwitchToLogin={openLoginModal}
+        onSwitchToSignup={openSignupModal}
+        onAccountFormChange={handleAccountFormChange}
+        onCreateAccount={handleCreateAccount}
+        onLogout={handleLogout}
+        formatAccountPhone={formatAccountPhone}
         otpInputRefs={otpInputRefs}
       />
     </div>

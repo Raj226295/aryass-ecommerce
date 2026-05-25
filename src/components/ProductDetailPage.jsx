@@ -16,6 +16,7 @@ function ProductDetailPage({
   onChooseOption,
   relatedProducts,
   onAddToCart,
+  onBuyNow,
   onOpenReview,
   onOpenShippingPolicy,
   onOpenReturnPolicy,
@@ -161,7 +162,12 @@ function ProductDetailPage({
               </span>
               {product.soldOut ? 'Notify me' : 'Add to cart'}
             </button>
-            <button type="button" className="secondary-action-button" disabled={product.soldOut}>
+            <button
+              type="button"
+              className="secondary-action-button"
+              disabled={product.soldOut}
+              onClick={onBuyNow}
+            >
               Buy it now
             </button>
           </div>
