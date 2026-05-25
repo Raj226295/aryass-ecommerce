@@ -10,8 +10,18 @@ function ProductCard({ product, onChooseOption }) {
         onClick={() => onChooseOption(product)}
       >
         <div className="product-art">
-          {product.soldOut ? <span className="product-badge">Sold out</span> : null}
-          {product.asSeenOn ? <span className="product-stamp">as seen on</span> : null}
+          {product.badges?.length ? (
+            <div className="product-badge-stack">
+              {product.badges.map((badge, index) => (
+                <span
+                  key={`${product.id}-badge-${badge.text}-${index}`}
+                  className={`product-badge product-badge--${badge.tone || 'neutral'}`}
+                >
+                  {badge.text}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <img className="product-image" src={product.image} alt={product.name} loading="lazy" />
         </div>
       </button>

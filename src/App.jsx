@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
+import AdminPage from './components/AdminPage'
 import CollectionPage from './components/CollectionPage'
 import CheckoutModal from './components/CheckoutModal'
 import FooterPage from './components/FooterPage'
@@ -67,9 +68,14 @@ const drawerCoupons = [
   { code: 'ARYASS15', note: 'Selected styles par extra savings' },
   { code: 'FREESHIP', note: 'Eligible orders par shipping benefit' },
 ]
+const ADMIN_PHONE_NUMBER = '9934622433'
 
 function normalizePhoneNumber(value = '') {
   return value.replace(/\D/g, '').slice(0, 10)
+}
+
+function isAdminPhoneNumber(phone = '') {
+  return normalizePhoneNumber(phone) === ADMIN_PHONE_NUMBER
 }
 
 function getMembershipStamp() {
@@ -100,6 +106,22 @@ function buildGuestProfile(phone) {
     memberSince: getMembershipStamp(),
     tier: 'Guest Access',
     isGuest: true,
+  }
+}
+
+function buildAdminProfile(phone, account = null) {
+  const normalizedPhone = normalizePhoneNumber(phone)
+
+  return {
+    fullName: account?.fullName || 'Aryass Admin',
+    email:
+      account?.email && account.email !== 'Not added yet' ? account.email : 'admin@aryass.com',
+    phone: normalizedPhone,
+    city: account?.city && account.city !== 'Not shared yet' ? account.city : 'Admin Access',
+    memberSince: account?.memberSince || getMembershipStamp(),
+    tier: 'Admin Access',
+    isGuest: false,
+    isAdmin: true,
   }
 }
 
@@ -226,6 +248,7 @@ function App() {
   const [reviewData, setReviewData] = useState(emptyReviewData)
   const [currentPage, setCurrentPage] = useState(1)
   const [activeInfoPage, setActiveInfoPage] = useState(null)
+  const [isAdminPageOpen, setIsAdminPageOpen] = useState(false)
   const [isDrawerAccountOpen, setIsDrawerAccountOpen] = useState(false)
   const [activeDrawerAccountPanel, setActiveDrawerAccountPanel] = useState('')
 
@@ -236,6 +259,13 @@ function App() {
     )
 
   const selectedProduct = products.find((product) => product.id === selectedProductId) || null
+  const selectedProductReviews = selectedProduct
+    ? reviews.filter((review) => review.productId === selectedProduct.id)
+    : []
+  const selectedProductReviewCount = (selectedProduct?.reviews || 0) + selectedProductReviews.length
+  const selectedProductReviewRating = selectedProductReviews.length
+    ? selectedProductReviews.reduce((sum, review) => sum + review.rating, 0) / selectedProductReviews.length
+    : selectedProduct?.rating || 0
   const isSelectedProductWishlisted = selectedProduct
     ? isWishlistItemSaved(selectedProduct.id, selectedSize, selectedColor)
     : false
@@ -587,6 +617,11 @@ function App() {
     setLoginError('')
   }
 
+  const closeAdminPage = () => {
+    setIsAdminPageOpen(false)
+    scrollToTop()
+  }
+
   const handleAccountTrigger = () => {
     if (isLoggedIn) {
       openProfileModal()
@@ -598,6 +633,7 @@ function App() {
 
   const handleLogout = () => {
     setIsLoggedIn(false)
+    setIsAdminPageOpen(false)
     setIsMenuOpen(false)
     resetDrawerAccountView()
     setIsLoginOpen(false)
@@ -791,18 +827,37 @@ function App() {
       return
     }
 
-    const matchingAccount = accountProfile?.phone === phoneNumber ? accountProfile : null
+    const normalizedPhone = normalizePhoneNumber(phoneNumber)
+    const matchingAccount = accountProfile?.phone === normalizedPhone ? accountProfile : null
+    const nextProfile = isAdminPhoneNumber(normalizedPhone)
+      ? buildAdminProfile(normalizedPhone, matchingAccount)
+      : matchingAccount || buildGuestProfile(normalizedPhone)
 
     setIsLoggedIn(true)
-    setAccountProfile(matchingAccount || buildGuestProfile(phoneNumber))
+    setAccountProfile(nextProfile)
     setLoginError('')
     setLoginMessage(
-      matchingAccount
-        ? `Welcome back, ${matchingAccount.fullName}.`
-        : `Signed in with ${maskPhoneNumber(phoneNumber)}.`,
+      isAdminPhoneNumber(normalizedPhone)
+        ? 'Admin access granted.'
+        : matchingAccount
+          ? `Welcome back, ${matchingAccount.fullName}.`
+          : `Signed in with ${maskPhoneNumber(normalizedPhone)}.`,
     )
     setIsLoginOpen(false)
-    resetLoginDraft(phoneNumber)
+    resetLoginDraft(normalizedPhone)
+
+    if (isAdminPhoneNumber(normalizedPhone)) {
+      setSelectedProductId(null)
+      setActiveInfoPage(null)
+      setIsMenuOpen(false)
+      resetDrawerAccountView()
+      setIsWishlistOpen(false)
+      setIsCartOpen(false)
+      setIsCheckoutOpen(false)
+      setIsReviewOpen(false)
+      setIsAdminPageOpen(true)
+      scrollToTop()
+    }
   }
 
   const createCheckoutItem = (product, itemQuantity, color, size) => ({
@@ -853,6 +908,12 @@ function App() {
 
   const openBuyNowCheckout = () => {
     if (!selectedProduct) {
+      return
+    }
+
+    if (!isLoggedIn) {
+      openLoginModal()
+      setLoginMessage('Login karke Buy Now checkout continue karein.')
       return
     }
 
@@ -971,6 +1032,20 @@ function App() {
     })
   }
 
+  const getDrawerAccountPanelTitle = (panel = '') =>
+    ({
+      profile: 'My Profile',
+      orders: 'My Orders',
+      tracking: 'Track Orders',
+      wishlist: 'Wishlist',
+      address: 'Address Book',
+      coupons: 'Coupons',
+      payments: 'Payments',
+      notifications: 'Notifications',
+      support: 'Help & Support',
+      password: 'Change Password',
+    })[panel] || 'Account'
+
   const toggleDrawerAccountPanel = (panel) => {
     if (!isLoggedIn) {
       openLoginModal()
@@ -978,7 +1053,7 @@ function App() {
     }
 
     setIsDrawerAccountOpen(true)
-    setActiveDrawerAccountPanel((current) => (current === panel ? '' : panel))
+    setActiveDrawerAccountPanel(panel)
   }
 
   const cancelOrder = (orderId) => {
@@ -1102,6 +1177,10 @@ function App() {
   }
 
   const submitReview = () => {
+    if (!selectedProduct) {
+      return
+    }
+
     if (!reviewData.rating || !reviewData.text || !reviewData.name || !reviewData.email) {
       window.alert('Fill all details')
       return
@@ -1109,7 +1188,14 @@ function App() {
 
     const newReview = {
       id: Date.now(),
-      ...reviewData,
+      productId: selectedProduct.id,
+      productName: selectedProduct.name,
+      rating: reviewData.rating,
+      text: reviewData.text.trim(),
+      name: reviewData.name.trim(),
+      email: reviewData.email.trim().toLowerCase(),
+      photos: [...reviewData.photos],
+      createdAt: new Date().toISOString(),
     }
 
     setReviews((current) => [newReview, ...current])
@@ -1125,6 +1211,26 @@ function App() {
       ...current,
       photos: [...current.photos, ...images].slice(0, 5),
     }))
+  }
+
+  const drawerAccountSubtitle = isLoggedIn
+    ? signedInLabel || 'Aryass Member'
+    : 'Login, register aur help support yahin se access karein.'
+
+  if (isAdminPageOpen) {
+    return (
+      <div className="page-shell page-shell--admin" id="top">
+        <AdminPage
+          onBack={closeAdminPage}
+          onLogout={handleLogout}
+          orders={orderHistory}
+          products={products}
+          reviews={reviews}
+          coupons={drawerCoupons}
+          accountProfile={accountProfile}
+        />
+      </div>
+    )
   }
 
   return (
@@ -1238,7 +1344,9 @@ function App() {
 
       <div
         id="mobile-drawer"
-        className={`mobile-drawer ${isMenuOpen ? 'is-open' : ''}`}
+        className={`mobile-drawer ${isMenuOpen ? 'is-open' : ''} ${
+          isDrawerAccountOpen ? 'is-account-view' : ''
+        }`}
         style={{
           transform: isMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
         }}
@@ -1263,6 +1371,15 @@ function App() {
           </div>
         </div>
 
+        <nav className="drawer-links">
+          {mobileMenuItems.map((item) => (
+            <a key={item} href="#collection" onClick={() => handleMenuCategorySelect(item)}>
+              <span>{item}</span>
+              <Icon name="chevron" />
+            </a>
+          ))}
+        </nav>
+
         <div className="drawer-account-section">
           {!isLoggedIn ? (
             <>
@@ -1278,7 +1395,7 @@ function App() {
                   </span>
                   <span className="drawer-account-copy">
                     <strong>Account</strong>
-                    <small>Login, register aur help support yahin se access karein.</small>
+                    <small>{drawerAccountSubtitle}</small>
                   </span>
                 </span>
                 <Icon
@@ -1289,6 +1406,20 @@ function App() {
 
               {isDrawerAccountOpen ? (
                 <div className="drawer-account-actions">
+                  <div className="drawer-account-detail-head drawer-account-detail-head--root">
+                    <button
+                      type="button"
+                      className="drawer-account-back"
+                      onClick={resetDrawerAccountView}
+                    >
+                      <Icon name="left" />
+                      Back
+                    </button>
+                    <div className="drawer-account-heading">
+                      <strong>Account</strong>
+                      <p>Login ya register karke apna account aur support access karein.</p>
+                    </div>
+                  </div>
                   <button type="button" className="drawer-account-action" onClick={openLoginModal}>
                     Login
                   </button>
@@ -1319,7 +1450,7 @@ function App() {
                   </span>
                   <span className="drawer-account-copy">
                     <strong>Account</strong>
-                    <small>{signedInLabel || 'Aryass Member'}</small>
+                    <small>{drawerAccountSubtitle}</small>
                   </span>
                 </span>
                 <Icon
@@ -1329,78 +1460,116 @@ function App() {
               </button>
 
               {isDrawerAccountOpen ? (
-                <div className="drawer-account-actions">
-              <button type="button" className="drawer-account-action" onClick={openProfileModal}>
-                My Profile
-              </button>
-              <button
-                type="button"
-                className="drawer-account-action"
-                onClick={() => toggleDrawerAccountPanel('orders')}
-              >
-                My Orders
-              </button>
-              <button
-                type="button"
-                className="drawer-account-action"
-                onClick={() => toggleDrawerAccountPanel('tracking')}
-              >
-                Track Orders
-              </button>
-              <button type="button" className="drawer-account-action" onClick={openWishlist}>
-                Wishlist
-              </button>
-              <button
-                type="button"
-                className="drawer-account-action"
-                onClick={() => toggleDrawerAccountPanel('address')}
-              >
-                Address Book
-              </button>
-              <button
-                type="button"
-                className="drawer-account-action"
-                onClick={() => toggleDrawerAccountPanel('coupons')}
-              >
-                Coupons
-              </button>
-              <button
-                type="button"
-                className="drawer-account-action"
-                onClick={() => toggleDrawerAccountPanel('payments')}
-              >
-                Payments
-              </button>
-              <button
-                type="button"
-                className="drawer-account-action"
-                onClick={() => toggleDrawerAccountPanel('notifications')}
-              >
-                Notifications
-              </button>
-              <button
-                type="button"
-                className="drawer-account-action"
-                onClick={() => openFooterPage(FOOTER_PAGE_IDS.contactInformation)}
-              >
-                Help & Support
-              </button>
-              <button
-                type="button"
-                className="drawer-account-action"
-                onClick={() => toggleDrawerAccountPanel('password')}
-              >
-                Change Password
-              </button>
-              {isLoggedIn ? (
-                <button
-                  type="button"
-                  className="drawer-account-action drawer-account-action--logout"
-                  onClick={handleLogout}
+                <div
+                  className={`drawer-account-actions ${
+                    activeDrawerAccountPanel ? 'is-detail-view' : ''
+                  }`}
                 >
-                  Logout
-                </button>
-              ) : null}
+                  <div
+                    className={`drawer-account-detail-head ${
+                      activeDrawerAccountPanel ? '' : 'drawer-account-detail-head--root'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      className="drawer-account-back"
+                      onClick={
+                        activeDrawerAccountPanel
+                          ? () => setActiveDrawerAccountPanel('')
+                          : resetDrawerAccountView
+                      }
+                    >
+                      <Icon name="left" />
+                      Back
+                    </button>
+                    <div className="drawer-account-heading">
+                      <strong>
+                        {activeDrawerAccountPanel
+                          ? getDrawerAccountPanelTitle(activeDrawerAccountPanel)
+                          : 'Account'}
+                      </strong>
+                      {!activeDrawerAccountPanel ? <p>{drawerAccountSubtitle}</p> : null}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => toggleDrawerAccountPanel('profile')}
+                  >
+                    My Profile
+                  </button>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => toggleDrawerAccountPanel('orders')}
+                  >
+                    My Orders
+                  </button>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => toggleDrawerAccountPanel('tracking')}
+                  >
+                    Track Orders
+                  </button>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => toggleDrawerAccountPanel('wishlist')}
+                  >
+                    Wishlist
+                  </button>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => toggleDrawerAccountPanel('address')}
+                  >
+                    Address Book
+                  </button>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => toggleDrawerAccountPanel('coupons')}
+                  >
+                    Coupons
+                  </button>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => toggleDrawerAccountPanel('payments')}
+                  >
+                    Payments
+                  </button>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => toggleDrawerAccountPanel('notifications')}
+                  >
+                    Notifications
+                  </button>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => toggleDrawerAccountPanel('support')}
+                  >
+                    Help & Support
+                  </button>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => toggleDrawerAccountPanel('password')}
+                  >
+                    Change Password
+                  </button>
+                  {isLoggedIn ? (
+                    <button
+                      type="button"
+                      className="drawer-account-action drawer-account-action--logout"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </button>
+                  ) : null}
 
               {activeDrawerAccountPanel === 'orders' ? (
                 <div className="drawer-order-list">
@@ -1467,6 +1636,77 @@ function App() {
                     <div className="drawer-order-empty">
                       <strong>No orders to track</strong>
                       <p>Jab order place hoga, uska live status yahin show hoga.</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {activeDrawerAccountPanel === 'profile' ? (
+                <div className="drawer-order-list">
+                  <article className="drawer-order-card">
+                    <div className="drawer-order-head">
+                      <div>
+                        <h4>{accountProfile?.fullName || 'Aryass Member'}</h4>
+                        <p>{accountProfile?.tier || 'Account access'}</p>
+                      </div>
+                      <span>{accountProfile?.memberSince || 'Member'}</span>
+                    </div>
+                    <p className="drawer-order-meta">
+                      Email: {accountProfile?.email || 'Not added yet'}
+                    </p>
+                    <p className="drawer-order-meta">
+                      Phone: {formatAccountPhone(accountProfile?.phone)}
+                    </p>
+                    <p className="drawer-order-meta">
+                      City: {accountProfile?.city || 'Not shared yet'}
+                    </p>
+                  </article>
+                  <button type="button" className="drawer-account-action" onClick={openProfileModal}>
+                    Edit Profile
+                  </button>
+                </div>
+              ) : null}
+
+              {activeDrawerAccountPanel === 'wishlist' ? (
+                <div className="drawer-order-list">
+                  {wishlistItems.length ? (
+                    wishlistItems.map((item) => (
+                      <article
+                        key={`${item.id}-${item.size}-${item.color}`}
+                        className="drawer-order-card"
+                      >
+                        <div className="drawer-order-head">
+                          <div>
+                            <h4>{item.name}</h4>
+                            <p>{formatPrice(item.price.toLocaleString('en-IN'))}</p>
+                          </div>
+                          <span>{item.soldOut ? 'Sold out' : 'Saved'}</span>
+                        </div>
+                        <p className="drawer-order-meta">Color: {item.color}</p>
+                        <p className="drawer-order-meta">Size: {item.size}</p>
+                        <div className="wishlist-item-actions">
+                          <button
+                            type="button"
+                            className="drawer-account-action"
+                            onClick={() => addWishlistItemToCart(item)}
+                            disabled={item.soldOut}
+                          >
+                            {item.soldOut ? 'Sold out' : 'Add to cart'}
+                          </button>
+                          <button
+                            type="button"
+                            className="wishlist-remove-button"
+                            onClick={() => removeFromWishlist(item.id, item.size, item.color)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <div className="drawer-order-empty">
+                      <strong>No saved styles yet</strong>
+                      <p>Jo product pasand aaye usse heart icon se wishlist me save kar lo.</p>
                     </div>
                   )}
                 </div>
@@ -1584,6 +1824,37 @@ function App() {
                 </div>
               ) : null}
 
+              {activeDrawerAccountPanel === 'support' ? (
+                <div className="drawer-order-list">
+                  <article className="drawer-order-card">
+                    <div className="drawer-order-head">
+                      <div>
+                        <h4>Help & Support</h4>
+                        <p>Order help, returns, aur general assistance</p>
+                      </div>
+                      <span>Open</span>
+                    </div>
+                    <p className="drawer-order-meta">
+                      Email support: Use the support email shared in your order confirmation or footer
+                      contact block.
+                    </p>
+                    <p className="drawer-order-meta">
+                      WhatsApp assistance: Text-only support quick order updates ke liye available hai.
+                    </p>
+                    <p className="drawer-order-meta">
+                      Working hours: Monday to Saturday, 10 AM to 7 PM IST.
+                    </p>
+                  </article>
+                  <button
+                    type="button"
+                    className="drawer-account-action"
+                    onClick={() => openFooterPage(FOOTER_PAGE_IDS.contactInformation)}
+                  >
+                    Open Support Page
+                  </button>
+                </div>
+              ) : null}
+
               {activeDrawerAccountPanel === 'password' ? (
                 <div className="drawer-order-list">
                   <article className="drawer-order-card">
@@ -1609,19 +1880,6 @@ function App() {
             </>
           )}
         </div>
-
-        <nav className="drawer-links">
-          {mobileMenuItems.map((item) => (
-            <a
-              key={item}
-              href="#collection"
-              onClick={() => handleMenuCategorySelect(item)}
-            >
-              <span>{item}</span>
-              <Icon name="chevron" />   
-            </a>
-          ))}
-        </nav>
 
         <div className="drawer-footer">
           <SocialLinks
@@ -1659,7 +1917,9 @@ function App() {
           onOpenReview={openReview}
           onOpenShippingPolicy={() => openFooterPage(FOOTER_PAGE_IDS.shippingPolicy)}
           onOpenReturnPolicy={() => openFooterPage(FOOTER_PAGE_IDS.returnsExchanges)}
-          reviewCount={reviews.length}
+          reviewCount={selectedProductReviewCount}
+          reviewRating={selectedProductReviewRating}
+          productReviews={selectedProductReviews}
           isWishlisted={isSelectedProductWishlisted}
         />
       ) : (

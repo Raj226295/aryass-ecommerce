@@ -897,6 +897,51 @@ function formatCatalogPrice(value) {
   })
 }
 
+function parseCatalogPriceValue(value) {
+  return Number(String(value || 0).replace(/,/g, ''))
+}
+
+function normalizeProductBadges(badges = []) {
+  return badges
+    .map((badge) =>
+      typeof badge === 'string'
+        ? { text: badge, tone: 'neutral' }
+        : {
+            text: badge?.text || '',
+            tone: badge?.tone || 'neutral',
+          },
+    )
+    .filter((badge) => badge.text)
+}
+
+function buildProductBadges({ badges, oldPrice, price, soldOut, asSeenOn }) {
+  if (Array.isArray(badges)) {
+    return normalizeProductBadges(badges)
+  }
+
+  const nextBadges = []
+  const oldPriceValue = parseCatalogPriceValue(oldPrice)
+  const priceValue = parseCatalogPriceValue(price)
+
+  if (oldPriceValue > priceValue && priceValue > 0) {
+    const discountPercent = Math.round(((oldPriceValue - priceValue) / oldPriceValue) * 100)
+
+    if (discountPercent >= 5) {
+      nextBadges.push({ text: `${discountPercent}% Off`, tone: 'sale' })
+    }
+  }
+
+  if (asSeenOn) {
+    nextBadges.push({ text: 'As Seen On', tone: 'stamp' })
+  }
+
+  if (soldOut) {
+    nextBadges.push({ text: 'Sold Out', tone: 'neutral' })
+  }
+
+  return nextBadges
+}
+
 function buildSizes(index, soldOut) {
   const sizeLabels = productSizeSets[index % productSizeSets.length]
 
@@ -978,6 +1023,7 @@ function createProductRecord({
   reviews = 0,
   oldPrice,
   asSeenOn = false,
+  badges,
   label,
   idPrefix,
 }) {
@@ -998,6 +1044,7 @@ function createProductRecord({
     reviews,
     soldOut,
     asSeenOn,
+    badges: buildProductBadges({ badges, oldPrice, price, soldOut, asSeenOn }),
     image: gallery[0],
     gallery,
     priceValue: Number(price.replace(/,/g, '')),

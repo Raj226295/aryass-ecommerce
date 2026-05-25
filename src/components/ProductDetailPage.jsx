@@ -2,6 +2,18 @@ import ProductCard from './ProductCard'
 import Icon from './Icon'
 import { formatPrice } from '../data/catalog'
 
+function formatReviewDate(dateString) {
+  if (!dateString) {
+    return ''
+  }
+
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(dateString))
+}
+
 function ProductDetailPage({
   product,
   selectedImage,
@@ -22,8 +34,12 @@ function ProductDetailPage({
   onOpenShippingPolicy,
   onOpenReturnPolicy,
   reviewCount,
+  reviewRating,
+  productReviews,
   isWishlisted,
 }) {
+  const visibleRating = Math.min(5, Math.max(1, Math.round(reviewRating || 0)))
+
   return (
     <main className="detail-page">
       <section className="detail-breadcrumb-row">
@@ -39,7 +55,18 @@ function ProductDetailPage({
       <section className="detail-layout">
         <div className="detail-gallery">
           <div className="detail-main-media">
-            {product.soldOut ? <span className="detail-main-badge">Sold out</span> : null}
+            {product.badges?.length ? (
+              <div className="detail-main-badge-stack">
+                {product.badges.map((badge, index) => (
+                  <span
+                    key={`${product.id}-detail-badge-${badge.text}-${index}`}
+                    className={`detail-main-badge detail-main-badge--${badge.tone || 'neutral'}`}
+                  >
+                    {badge.text}
+                  </span>
+                ))}
+              </div>
+            ) : null}
             <img src={selectedImage} alt={product.name} />
           </div>
 
@@ -62,10 +89,10 @@ function ProductDetailPage({
           <p className="detail-label">{product.label}</p>
           <h1>{product.name}</h1>
 
-          {product.rating ? (
+          {reviewCount ? (
             <p className="detail-rating">
-              {'\u2605'.repeat(product.rating)}
-              <span>{product.reviews} reviews</span>
+              {'\u2605'.repeat(visibleRating)}
+              <span>{reviewCount} review{reviewCount > 1 ? 's' : ''}</span>
             </p>
           ) : (
             <p className="detail-rating detail-rating--muted">No reviews yet</p>
@@ -246,6 +273,34 @@ function ProductDetailPage({
             Write a review
           </button>
         </div>
+        {productReviews.length ? (
+          <div className="review-list">
+            {productReviews.map((review) => (
+              <article key={review.id} className="review-item">
+                <div className="review-item-head">
+                  <div>
+                    <strong>{review.name}</strong>
+                    <p className="review-meta">{formatReviewDate(review.createdAt)}</p>
+                  </div>
+                  <span className="review-stars">{'\u2605'.repeat(review.rating)}</span>
+                </div>
+                <p className="review-copy">{review.text}</p>
+                {review.photos?.length ? (
+                  <div className="review-photo-row">
+                    {review.photos.map((photo, index) => (
+                      <img
+                        key={`${review.id}-photo-${index}`}
+                        src={photo}
+                        alt={`${review.name} review upload ${index + 1}`}
+                        className="review-photo"
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <section className="detail-related-section">
