@@ -17,10 +17,12 @@ function ProductDetailPage({
   relatedProducts,
   onAddToCart,
   onBuyNow,
+  onToggleWishlist,
   onOpenReview,
   onOpenShippingPolicy,
   onOpenReturnPolicy,
   reviewCount,
+  isWishlisted,
 }) {
   return (
     <main className="detail-page">
@@ -151,17 +153,28 @@ function ProductDetailPage({
           </div>
 
           <div className="detail-action-stack">
-            <button
-              type="button"
-              className="primary-action-button"
-              disabled={product.soldOut}
-              onClick={onAddToCart}
-            >
-              <span className="primary-action-icon">
-                <Icon name="bag" />
-              </span>
-              {product.soldOut ? 'Notify me' : 'Add to cart'}
-            </button>
+            <div className="detail-primary-actions">
+              <button
+                type="button"
+                className="primary-action-button"
+                disabled={product.soldOut}
+                onClick={onAddToCart}
+              >
+                <span className="primary-action-icon">
+                  <Icon name="bag" />
+                </span>
+                {product.soldOut ? 'Notify me' : 'Add to cart'}
+              </button>
+              <button
+                type="button"
+                className={`wishlist-action-button ${isWishlisted ? 'is-active' : ''}`}
+                aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                aria-pressed={isWishlisted}
+                onClick={onToggleWishlist}
+              >
+                <Icon name="heart" />
+              </button>
+            </div>
             <button
               type="button"
               className="secondary-action-button"

@@ -181,6 +181,8 @@ function App() {
   const [quantity, setQuantity] = useState(1)
   const [activeCategory, setActiveCategory] = useState(defaultCategory)
   const [isCategoryScoped, setIsCategoryScoped] = useState(false)
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false)
+  const [wishlistItems, setWishlistItems] = useState([])
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [cartItems, setCartItems] = useState([])
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
@@ -199,8 +201,15 @@ function App() {
   const [activeInfoPage, setActiveInfoPage] = useState(null)
 
   const otpInputRefs = useRef([])
+  const isWishlistItemSaved = (productId, size, color) =>
+    wishlistItems.some(
+      (item) => item.id === productId && item.size === size && item.color === color,
+    )
 
   const selectedProduct = products.find((product) => product.id === selectedProductId) || null
+  const isSelectedProductWishlisted = selectedProduct
+    ? isWishlistItemSaved(selectedProduct.id, selectedSize, selectedColor)
+    : false
   const activeCategoryProducts = isCategoryScoped
     ? products.filter((product) => product.category === activeCategory)
     : products
@@ -241,6 +250,7 @@ function App() {
         ),
       ].slice(0, 4)
     : []
+  const wishlistCount = wishlistItems.length
   const cartItemCount = cartItems.reduce((total, item) => total + item.qty, 0)
   const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0)
   const checkoutTotal = checkoutItems.reduce((sum, item) => sum + item.price * item.qty, 0)
@@ -287,6 +297,7 @@ function App() {
       if (event.key === 'Escape') {
         setIsMenuOpen(false)
         setIsLoginOpen(false)
+        setIsWishlistOpen(false)
         setIsCartOpen(false)
         setIsCheckoutOpen(false)
         setIsReviewOpen(false)
@@ -304,12 +315,14 @@ function App() {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow =
-      isMenuOpen || isLoginOpen || isCartOpen || isCheckoutOpen || isReviewOpen ? 'hidden' : ''
+      isMenuOpen || isLoginOpen || isWishlistOpen || isCartOpen || isCheckoutOpen || isReviewOpen
+        ? 'hidden'
+        : ''
 
     return () => {
       document.body.style.overflow = previousOverflow
     }
-  }, [isCartOpen, isCheckoutOpen, isLoginOpen, isMenuOpen, isReviewOpen])
+  }, [isCartOpen, isCheckoutOpen, isLoginOpen, isMenuOpen, isReviewOpen, isWishlistOpen])
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -362,6 +375,7 @@ function App() {
     setQuantity(1)
     setActiveInfoPage(null)
     setIsMenuOpen(false)
+    setIsWishlistOpen(false)
     setIsCartOpen(false)
     setIsCheckoutOpen(false)
     setIsReviewOpen(false)
@@ -389,6 +403,7 @@ function App() {
     setQuantity(1)
     setActiveInfoPage(null)
     setIsMenuOpen(false)
+    setIsWishlistOpen(false)
     setIsCartOpen(false)
     setIsCheckoutOpen(false)
     setIsReviewOpen(false)
@@ -415,6 +430,7 @@ function App() {
     )
 
     setIsMenuOpen(false)
+    setIsWishlistOpen(false)
     setIsCartOpen(false)
     setIsCheckoutOpen(false)
     setIsReviewOpen(false)
@@ -441,6 +457,7 @@ function App() {
     )
 
     setIsMenuOpen(false)
+    setIsWishlistOpen(false)
     setIsCartOpen(false)
     setIsCheckoutOpen(false)
     setIsReviewOpen(false)
@@ -456,6 +473,7 @@ function App() {
     setAuthView('profile')
     setLoginError('')
     setIsMenuOpen(false)
+    setIsWishlistOpen(false)
     setIsCartOpen(false)
     setIsCheckoutOpen(false)
     setIsReviewOpen(false)
@@ -479,6 +497,7 @@ function App() {
   const handleLogout = () => {
     setIsLoggedIn(false)
     setIsLoginOpen(false)
+    setIsWishlistOpen(false)
     setIsCartOpen(false)
     setIsCheckoutOpen(false)
     setIsReviewOpen(false)
@@ -503,6 +522,7 @@ function App() {
     setSelectedSize(getDefaultSize(product, initialSelection.size))
     setQuantity(1)
     setIsMenuOpen(false)
+    setIsWishlistOpen(false)
     setIsCartOpen(false)
     setIsCheckoutOpen(false)
     setIsReviewOpen(false)
@@ -518,6 +538,7 @@ function App() {
   const openFooterPage = (pageId) => {
     setActiveInfoPage(pageId)
     setIsMenuOpen(false)
+    setIsWishlistOpen(false)
     setIsCartOpen(false)
     setIsCheckoutOpen(false)
     setIsReviewOpen(false)
@@ -688,6 +709,16 @@ function App() {
     image: product.image,
   })
 
+  const createWishlistItem = (product, color, size, image = product.image) => ({
+    id: product.id,
+    name: product.name,
+    price: Number(product.price.replace(/,/g, '')),
+    size,
+    color,
+    image,
+    soldOut: product.soldOut,
+  })
+
   const closeCheckout = () => {
     setIsCheckoutOpen(false)
     setCheckoutError('')
@@ -707,6 +738,7 @@ function App() {
     setCheckoutError('')
     setDeliveryForm(getDeliveryFormPrefill(savedDeliveryDetails, accountProfile))
     setCheckoutStep(hasSavedDelivery ? 'payment' : 'delivery')
+    setIsWishlistOpen(false)
     setIsCartOpen(false)
     setIsLoginOpen(false)
     setIsReviewOpen(false)
@@ -809,6 +841,15 @@ function App() {
     setQuantity((current) => Math.max(1, current + change))
   }
 
+  const openWishlist = () => {
+    setIsMenuOpen(false)
+    setIsLoginOpen(false)
+    setIsCartOpen(false)
+    setIsCheckoutOpen(false)
+    setIsReviewOpen(false)
+    setIsWishlistOpen(true)
+  }
+
   const openReview = () => {
     setIsReviewOpen(true)
   }
@@ -828,35 +869,84 @@ function App() {
     )
   }
 
+  const addSelectionToCart = (product, itemQuantity, color, size) => {
+    setCartItems((current) => {
+      const existingItem = current.find(
+        (item) => item.id === product.id && item.size === size && item.color === color,
+      )
+
+      if (existingItem) {
+        return current.map((item) =>
+          item.id === product.id && item.size === size && item.color === color
+            ? { ...item, qty: item.qty + itemQuantity }
+            : item,
+        )
+      }
+
+      return [...current, createCheckoutItem(product, itemQuantity, color, size)]
+    })
+  }
+
+  const toggleWishlist = (product, selection = {}) => {
+    if (!product) {
+      return
+    }
+
+    const color = selection.color || product.colors[0] || ''
+    const size = getDefaultSize(product, selection.size)
+    const image = selection.image || product.image
+
+    setWishlistItems((current) => {
+      const exists = current.some(
+        (item) => item.id === product.id && item.size === size && item.color === color,
+      )
+
+      if (exists) {
+        return current.filter(
+          (item) => item.id !== product.id || item.size !== size || item.color !== color,
+        )
+      }
+
+      return [...current, createWishlistItem(product, color, size, image)]
+    })
+  }
+
+  const removeFromWishlist = (id, size, color) => {
+    setWishlistItems((current) =>
+      current.filter((item) => item.id !== id || item.size !== size || item.color !== color),
+    )
+  }
+
+  const toggleSelectedProductWishlist = () => {
+    if (!selectedProduct) {
+      return
+    }
+
+    toggleWishlist(selectedProduct, {
+      color: selectedColor,
+      size: selectedSize,
+      image: selectedImage,
+    })
+  }
+
+  const addWishlistItemToCart = (item) => {
+    const product = products.find((currentProduct) => currentProduct.id === item.id)
+
+    if (!product || item.soldOut) {
+      return
+    }
+
+    addSelectionToCart(product, 1, item.color, item.size)
+    setIsWishlistOpen(false)
+    setIsCartOpen(true)
+  }
+
   const addToCart = () => {
     if (!selectedProduct) {
       return
     }
 
-    const existingItem = cartItems.find(
-      (item) =>
-        item.id === selectedProduct.id &&
-        item.size === selectedSize &&
-        item.color === selectedColor,
-    )
-
-    if (existingItem) {
-      setCartItems((current) =>
-        current.map((item) =>
-          item.id === selectedProduct.id &&
-          item.size === selectedSize &&
-          item.color === selectedColor
-            ? { ...item, qty: item.qty + quantity }
-            : item,
-        ),
-      )
-    } else {
-      setCartItems((current) => [
-        ...current,
-        createCheckoutItem(selectedProduct, quantity, selectedColor, selectedSize),
-      ])
-    }
-
+    addSelectionToCart(selectedProduct, quantity, selectedColor, selectedSize)
     setIsCartOpen(true)
   }
 
@@ -959,30 +1049,26 @@ function App() {
           </button>
           <button
             type="button"
+            className={`header-icon header-icon--wishlist ${
+              isWishlistOpen || wishlistCount ? 'is-active' : ''
+            }`}
+            aria-label="Open wishlist"
+            onClick={openWishlist}
+          >
+            <Icon name="heart" />
+            {wishlistCount ? <span className="header-count-badge">{wishlistCount}</span> : null}
+          </button>
+          <button
+            type="button"
             className="header-icon header-icon--cart"
             aria-label="Open cart"
-            onClick={() => setIsCartOpen(true)}
+            onClick={() => {
+              setIsWishlistOpen(false)
+              setIsCartOpen(true)
+            }}
           >
             <Icon name="bag" />
-
-            <span
-              style={{
-                position: 'absolute',
-                top: '2px',
-                right: '2px',
-                background: 'black',
-                color: 'white',
-                fontSize: '10px',
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {cartItemCount}
-            </span>
+            <span className="header-count-badge">{cartItemCount}</span>
           </button>
         </div>
       </header>
@@ -1050,6 +1136,7 @@ function App() {
           product={selectedProduct}
           onAddToCart={addToCart}
           onBuyNow={openBuyNowCheckout}
+          onToggleWishlist={toggleSelectedProductWishlist}
           selectedImage={selectedImage}
           selectedColor={selectedColor}
           selectedSize={selectedSize}
@@ -1065,6 +1152,7 @@ function App() {
           onOpenShippingPolicy={() => openFooterPage(FOOTER_PAGE_IDS.shippingPolicy)}
           onOpenReturnPolicy={() => openFooterPage(FOOTER_PAGE_IDS.returnsExchanges)}
           reviewCount={reviews.length}
+          isWishlisted={isSelectedProductWishlisted}
         />
       ) : (
         <CollectionPage
@@ -1167,7 +1255,80 @@ function App() {
         </p>
       </div>
 
-      <div className={`cart-overlay ${isCartOpen ? 'show' : ''}`} onClick={() => setIsCartOpen(false)} />
+      <div
+        className={`cart-overlay ${isCartOpen || isWishlistOpen ? 'show' : ''}`}
+        onClick={() => {
+          setIsCartOpen(false)
+          setIsWishlistOpen(false)
+        }}
+      />
+
+      <div className={`wishlist-drawer ${isWishlistOpen ? 'open' : ''}`}>
+        <div className="cart-top">
+          <h2>Your wishlist</h2>
+
+          <button
+            type="button"
+            onClick={() => setIsWishlistOpen(false)}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              fontSize: '35px',
+              cursor: 'pointer',
+            }}
+          >
+            &times;
+          </button>
+        </div>
+
+        <div className="cart-items">
+          {wishlistItems.length ? (
+            wishlistItems.map((item) => (
+              <div className="cart-item" key={`${item.id}-${item.size}-${item.color}`}>
+                <img src={item.image} alt={item.name} />
+
+                <div className="wishlist-item-copy">
+                  <h4>{item.name}</h4>
+                  <p>{formatPrice(item.price.toLocaleString('en-IN'))}</p>
+                  <p>Color: {item.color}</p>
+                  <p>Size: {item.size}</p>
+
+                  <div className="wishlist-item-actions">
+                    <button
+                      type="button"
+                      className="option-button"
+                      onClick={() => addWishlistItemToCart(item)}
+                      disabled={item.soldOut}
+                    >
+                      {item.soldOut ? 'Sold out' : 'Add to cart'}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="wishlist-remove-button"
+                      onClick={() => removeFromWishlist(item.id, item.size, item.color)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="wishlist-empty-state">
+              <h3>No saved styles yet</h3>
+              <p>Jo product pasand aaye usse heart icon se wishlist me save kar lo.</p>
+              <button
+                type="button"
+                className="secondary-action-button"
+                onClick={() => setIsWishlistOpen(false)}
+              >
+                Continue shopping
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className={`cart-drawer ${isCartOpen ? 'open' : ''}`}>
         <div className="cart-top">

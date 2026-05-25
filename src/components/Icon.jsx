@@ -6,6 +6,9 @@ function Icon({ name, className = '' }) {
     account: (
       <path d="M12 5a3.2 3.2 0 1 0 0 6.4A3.2 3.2 0 0 0 12 5Zm-5.2 13a5.2 5.2 0 0 1 10.4 0" />
     ),
+    heart: (
+      <path d="M12 20.5 5.8 14.7a4.5 4.5 0 0 1 6.2-6.5L12 9l.01-.8a4.5 4.5 0 0 1 6.2 6.5L12 20.5Z" />
+    ),
     bag: <path d="M7 8V7a5 5 0 0 1 10 0v1M5 8h14l-1 11H6L5 8Z" />,
     chevron: <path d="m9 6 6 6-6 6" />,
     left: <path d="m14.5 6.5-5 5.5 5 5.5" />,
