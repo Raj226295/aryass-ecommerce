@@ -20,7 +20,7 @@ import {
   matchPriceFilter,
   matchSizeFilter,
   mobileMenuItems,
-  products,
+  products as initialProducts,
   quickLinks,
   sizeFilterLabels,
 } from './data/catalog'
@@ -69,6 +69,160 @@ const drawerCoupons = [
   { code: 'FREESHIP', note: 'Eligible orders par shipping benefit' },
 ]
 const ADMIN_PHONE_NUMBER = '9934622433'
+const AUTH_STORAGE_KEY = 'aryass-auth-state'
+const PRODUCTS_STORAGE_KEY = 'aryass-products-state'
+
+function getStoredAuthState() {
+  if (typeof window === 'undefined') {
+    return {
+      isLoggedIn: false,
+      accountProfile: null,
+      isAdminPageOpen: false,
+    }
+  }
+
+  try {
+    const rawAuthState = window.localStorage.getItem(AUTH_STORAGE_KEY)
+
+    if (!rawAuthState) {
+      return {
+        isLoggedIn: false,
+        accountProfile: null,
+        isAdminPageOpen: false,
+      }
+    }
+
+    const parsedAuthState = JSON.parse(rawAuthState)
+    const isLoggedIn = parsedAuthState?.isLoggedIn === true
+    const accountProfile =
+      parsedAuthState?.accountProfile && typeof parsedAuthState.accountProfile === 'object'
+        ? parsedAuthState.accountProfile
+        : null
+    const isAdminPageOpen = Boolean(
+      isLoggedIn && accountProfile?.isAdmin && parsedAuthState?.isAdminPageOpen,
+    )
+
+    return {
+      isLoggedIn: isLoggedIn && Boolean(accountProfile),
+      accountProfile: isLoggedIn ? accountProfile : null,
+      isAdminPageOpen,
+    }
+  } catch {
+    return {
+      isLoggedIn: false,
+      accountProfile: null,
+      isAdminPageOpen: false,
+    }
+  }
+}
+
+function persistAuthState({ isLoggedIn, accountProfile, isAdminPageOpen }) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    if (!isLoggedIn || !accountProfile) {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY)
+      return
+    }
+
+    window.localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        isLoggedIn: true,
+        accountProfile,
+        isAdminPageOpen: Boolean(accountProfile.isAdmin && isAdminPageOpen),
+      }),
+    )
+  } catch {
+    // Ignore storage write errors and continue with in-memory auth state.
+  }
+}
+
+function mergeStoredProducts(storedProducts) {
+  if (!Array.isArray(storedProducts) || !storedProducts.length) {
+    return initialProducts
+  }
+
+  const storedProductsById = new Map(
+    storedProducts
+      .filter((product) => product && typeof product === 'object' && typeof product.id === 'string')
+      .map((product) => [product.id, product]),
+  )
+
+  return initialProducts.map((product) => {
+    const storedProduct = storedProductsById.get(product.id)
+
+    if (!storedProduct) {
+      return product
+    }
+
+    return {
+      ...product,
+      ...storedProduct,
+      image: storedProduct.image || product.image,
+      gallery:
+        Array.isArray(storedProduct.gallery) && storedProduct.gallery.length
+          ? storedProduct.gallery
+          : product.gallery,
+      colors:
+        Array.isArray(storedProduct.colors) && storedProduct.colors.length
+          ? storedProduct.colors
+          : product.colors,
+      sizes:
+        Array.isArray(storedProduct.sizes) && storedProduct.sizes.length
+          ? storedProduct.sizes
+          : product.sizes,
+      badges:
+        Array.isArray(storedProduct.badges) && storedProduct.badges.length
+          ? storedProduct.badges
+          : product.badges,
+      description:
+        Array.isArray(storedProduct.description) && storedProduct.description.length
+          ? storedProduct.description
+          : product.description,
+      styleNotes:
+        Array.isArray(storedProduct.styleNotes) && storedProduct.styleNotes.length
+          ? storedProduct.styleNotes
+          : product.styleNotes,
+      deliveryMeta:
+        Array.isArray(storedProduct.deliveryMeta) && storedProduct.deliveryMeta.length
+          ? storedProduct.deliveryMeta
+          : product.deliveryMeta,
+    }
+  })
+}
+
+function getStoredProducts() {
+  if (typeof window === 'undefined') {
+    return initialProducts
+  }
+
+  try {
+    const rawProductsState = window.localStorage.getItem(PRODUCTS_STORAGE_KEY)
+
+    if (!rawProductsState) {
+      return initialProducts
+    }
+
+    return mergeStoredProducts(JSON.parse(rawProductsState))
+  } catch {
+    return initialProducts
+  }
+}
+
+function persistProductsState(products) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products))
+  } catch {
+    // Ignore storage write errors and continue with in-memory catalog state.
+  }
+}
 
 function normalizePhoneNumber(value = '') {
   return value.replace(/\D/g, '').slice(0, 10)
@@ -202,7 +356,82 @@ function getDefaultSize(product, preferredSize = '') {
   return product.sizes.find((size) => size.available)?.label || product.sizes[0]?.label || ''
 }
 
+function buildManagedProductBadges(product, soldOut) {
+  const badges = Array.isArray(product.badges) ? product.badges : []
+  const nextBadges = badges.filter((badge) => {
+    if (typeof badge === 'string') {
+      return badge !== 'Sold Out'
+    }
+
+    return badge?.text !== 'Sold Out'
+  })
+
+  if (soldOut) {
+    nextBadges.push({ text: 'Sold Out', tone: 'neutral' })
+  }
+
+  return nextBadges
+}
+
+function buildProductSku(product, nextCategory) {
+  const skuParts = String(product.sku || '').split('-')
+  const skuBase =
+    skuParts.length >= 2 ? `${skuParts[0]}-${skuParts[1]}` : product.id.toUpperCase()
+
+  return `${skuBase}-${nextCategory.slice(0, 2).toUpperCase()}`
+}
+
+function syncManagedProductInventory(product, nextStockValue) {
+  const stockCount = Math.max(0, Number(nextStockValue) || 0)
+  const soldOut = stockCount === 0
+
+  return {
+    ...product,
+    stockCount,
+    soldOut,
+    badges: buildManagedProductBadges(product, soldOut),
+    sizes: product.sizes.map((size) => ({
+      ...size,
+      available: soldOut ? false : product.soldOut ? true : size.available,
+    })),
+  }
+}
+
+function syncManagedProductCategory(product, nextCategory) {
+  const nextStyleNotes = [...product.styleNotes]
+
+  if (nextStyleNotes.length) {
+    nextStyleNotes[0] = `Perfect for ${nextCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`
+  }
+
+  return {
+    ...product,
+    category: nextCategory,
+    sku: buildProductSku(product, nextCategory),
+    styleNotes: nextStyleNotes,
+  }
+}
+
+function syncManagedProductImage(product, nextImage) {
+  const normalizedImage = String(nextImage || '').trim()
+
+  if (!normalizedImage) {
+    return product
+  }
+
+  const nextGallery = [normalizedImage, ...(Array.isArray(product.gallery) ? product.gallery : [])]
+    .filter(Boolean)
+    .filter((image, index, gallery) => gallery.indexOf(image) === index)
+
+  return {
+    ...product,
+    image: normalizedImage,
+    gallery: nextGallery,
+  }
+}
+
 function App() {
+  const initialAuthStateRef = useRef(getStoredAuthState())
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [activeMessage, setActiveMessage] = useState(0)
   const [activeOffer, setActiveOffer] = useState(0)
@@ -216,9 +445,10 @@ function App() {
   const [loginMessage, setLoginMessage] = useState(
       'Enter your mobile number to continue with secure sign in.',
   )
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [accountProfile, setAccountProfile] = useState(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(initialAuthStateRef.current.isLoggedIn)
+  const [accountProfile, setAccountProfile] = useState(initialAuthStateRef.current.accountProfile)
   const [accountForm, setAccountForm] = useState(emptyAccountForm)
+  const [products, setProducts] = useState(() => getStoredProducts())
   const [selectedProductId, setSelectedProductId] = useState(null)
   const [selectedImage, setSelectedImage] = useState('')
   const [selectedColor, setSelectedColor] = useState('')
@@ -248,7 +478,9 @@ function App() {
   const [reviewData, setReviewData] = useState(emptyReviewData)
   const [currentPage, setCurrentPage] = useState(1)
   const [activeInfoPage, setActiveInfoPage] = useState(null)
-  const [isAdminPageOpen, setIsAdminPageOpen] = useState(false)
+  const [isAdminPageOpen, setIsAdminPageOpen] = useState(
+    initialAuthStateRef.current.isAdminPageOpen,
+  )
   const [isDrawerAccountOpen, setIsDrawerAccountOpen] = useState(false)
   const [activeDrawerAccountPanel, setActiveDrawerAccountPanel] = useState('')
 
@@ -435,6 +667,14 @@ function App() {
   }, [])
 
   useEffect(() => {
+    persistAuthState({ isLoggedIn, accountProfile, isAdminPageOpen })
+  }, [accountProfile, isAdminPageOpen, isLoggedIn])
+
+  useEffect(() => {
+    persistProductsState(products)
+  }, [products])
+
+  useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow =
       isMenuOpen || isLoginOpen || isWishlistOpen || isCartOpen || isCheckoutOpen || isReviewOpen
@@ -479,6 +719,52 @@ function App() {
   const clearPriceFilters = () => {
     setMinPriceInput('')
     setMaxPriceInput('')
+  }
+
+  const updateAdminProductCategory = (productId, nextCategory) => {
+    if (!mobileMenuItems.includes(nextCategory)) {
+      return
+    }
+
+    setProducts((currentProducts) =>
+      currentProducts.map((product) =>
+        product.id === productId ? syncManagedProductCategory(product, nextCategory) : product,
+      ),
+    )
+  }
+
+  const updateAdminProductStock = (productId, nextStockValue) => {
+    setProducts((currentProducts) =>
+      currentProducts.map((product) =>
+        product.id === productId
+          ? syncManagedProductInventory(product, nextStockValue)
+          : product,
+      ),
+    )
+  }
+
+  const adjustAdminProductStock = (productId, change) => {
+    setProducts((currentProducts) =>
+      currentProducts.map((product) =>
+        product.id === productId
+          ? syncManagedProductInventory(product, product.stockCount + change)
+          : product,
+      ),
+    )
+  }
+
+  const updateAdminProductImage = (productId, nextImage) => {
+    const normalizedImage = String(nextImage || '').trim()
+
+    if (!normalizedImage) {
+      return
+    }
+
+    setProducts((currentProducts) =>
+      currentProducts.map((product) =>
+        product.id === productId ? syncManagedProductImage(product, normalizedImage) : product,
+      ),
+    )
   }
 
   const handlePageChange = (nextPage) => {
@@ -1228,6 +1514,12 @@ function App() {
           reviews={reviews}
           coupons={drawerCoupons}
           accountProfile={accountProfile}
+          menuCategories={mobileMenuItems}
+          categoryContentByCategory={collectionContentByCategory}
+          onUpdateProductCategory={updateAdminProductCategory}
+          onUpdateProductStock={updateAdminProductStock}
+          onAdjustProductStock={adjustAdminProductStock}
+          onUpdateProductImage={updateAdminProductImage}
         />
       </div>
     )

@@ -2,17 +2,17 @@ import { useState } from 'react'
 import Icon from './Icon'
 
 const adminMenuItems = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'orders', label: 'Orders' },
-  { key: 'products', label: 'Products' },
-  { key: 'categories', label: 'Categories' },
-  { key: 'customers', label: 'Customers' },
-  { key: 'payments', label: 'Payments' },
-  { key: 'coupons', label: 'Coupons' },
-  { key: 'reviews', label: 'Reviews' },
-  { key: 'notifications', label: 'Notifications' },
-  { key: 'reports', label: 'Reports' },
-  { key: 'settings', label: 'Settings' },
+  { key: 'dashboard', label: 'Dashboard', note: 'Overview and business pulse' },
+  { key: 'orders', label: 'Orders', note: 'Dispatch and status control' },
+  { key: 'products', label: 'Products', note: 'Catalog, stock, and pricing' },
+  { key: 'categories', label: 'Categories', note: 'Top-level catalog structure' },
+  { key: 'customers', label: 'Customers', note: 'Accounts and moderation' },
+  { key: 'payments', label: 'Payments', note: 'Transactions and reconciliation' },
+  { key: 'coupons', label: 'Coupons', note: 'Discount campaigns and usage' },
+  { key: 'reviews', label: 'Reviews', note: 'Approve and manage feedback' },
+  { key: 'notifications', label: 'Notifications', note: 'Broadcasts and order alerts' },
+  { key: 'reports', label: 'Reports', note: 'Performance and revenue trends' },
+  { key: 'settings', label: 'Settings', note: 'Storefront and checkout controls' },
 ]
 
 const orderFilters = [
@@ -119,14 +119,6 @@ const sampleUsers = [
     totalSpend: 12490,
     type: 'Registered',
   },
-]
-
-const sampleCategories = [
-  { name: 'Men', products: 86, note: 'Seasonal drops and shirt edits.' },
-  { name: 'Women', products: 142, note: 'Main fashion catalog and occasionwear.' },
-  { name: 'Shoes', products: 38, note: 'Footwear and statement heels.' },
-  { name: 'Electronics', products: 12, note: 'Lifestyle add-ons and gifting range.' },
-  { name: 'Fashion', products: 94, note: 'Accessories, essentials, and trend-led picks.' },
 ]
 
 const sampleCoupons = [
@@ -293,15 +285,26 @@ function AdminPage({
   reviews,
   coupons,
   accountProfile,
+  menuCategories,
+  categoryContentByCategory,
+  onUpdateProductCategory,
+  onUpdateProductStock,
+  onAdjustProductStock,
+  onUpdateProductImage,
 }) {
   const [activeMenu, setActiveMenu] = useState('dashboard')
   const [activeOrderFilter, setActiveOrderFilter] = useState('all')
   const [activePaymentFilter, setActivePaymentFilter] = useState('all')
   const [activeCustomerFilter, setActiveCustomerFilter] = useState('all')
+  const [activeProductCategoryFilter, setActiveProductCategoryFilter] = useState('all')
+  const [productImageDrafts, setProductImageDrafts] = useState({})
   const [managedCustomers, setManagedCustomers] = useState(() => buildInitialCustomers(accountProfile))
   const [selectedCustomerId, setSelectedCustomerId] = useState(
     () => buildInitialCustomers(accountProfile)[0]?.id || '',
   )
+  const syncedCategories = menuCategories?.length
+    ? menuCategories
+    : [...new Set(products.map((product) => product.category))]
 
   const liveOrders = orders.map((order, index) => ({
     id: order.id,
@@ -346,7 +349,7 @@ function AdminPage({
       ? paymentRows
       : paymentRows.filter((payment) => getPaymentFilterKey(payment.status) === activePaymentFilter)
 
-  const inventoryRows = products.slice(0, 8).map((product) => {
+  const inventoryRows = products.map((product) => {
     const oldPriceValue = parsePriceValue(product.oldPrice)
     const priceValue = parsePriceValue(product.price)
     const discount =
@@ -357,6 +360,11 @@ function AdminPage({
     return {
       id: product.id,
       name: product.name,
+      image: product.image,
+      gallery: [product.image, ...(Array.isArray(product.gallery) ? product.gallery : [])]
+        .filter(Boolean)
+        .filter((image, index, gallery) => gallery.indexOf(image) === index)
+        .slice(0, 4),
       category: product.category,
       price: product.price,
       discount,
@@ -364,6 +372,25 @@ function AdminPage({
       colors: product.colors.slice(0, 3).join(', '),
       sizes: product.sizes.slice(0, 4).map((size) => size.label).join(', '),
       status: product.soldOut ? 'Out of Stock' : product.stockCount < 6 ? 'Low Stock' : 'In Stock',
+    }
+  })
+  const filteredInventoryRows =
+    activeProductCategoryFilter === 'all'
+      ? inventoryRows
+      : inventoryRows.filter((product) => product.category === activeProductCategoryFilter)
+  const categoryRows = syncedCategories.map((category) => {
+    const categoryProducts = products.filter((product) => product.category === category)
+    const liveCount = categoryProducts.filter((product) => !product.soldOut).length
+    const soldOutCount = categoryProducts.filter((product) => product.soldOut).length
+
+    return {
+      name: category,
+      products: categoryProducts.length,
+      liveCount,
+      soldOutCount,
+      note:
+        categoryContentByCategory?.[category]?.description ||
+        'Customer storefront ke saath synced category listing.',
     }
   })
 
@@ -408,6 +435,36 @@ function AdminPage({
   const topSellingRows = inventoryRows.slice(0, 4)
   const activeSectionLabel = adminMenuItems.find((item) => item.key === activeMenu)?.label || 'Dashboard'
   const adminName = accountProfile?.fullName || 'Aryass Admin'
+  const heroHighlights = [
+    `${formatCompactCount(Math.max(orderRows.length, 245))} orders`,
+    `${formatCompactCount(Math.max(pendingOrders, 12))} pending`,
+    `${formatCompactCount(totalProducts)} products live`,
+  ]
+  const openCategoryProducts = (category) => {
+    setActiveProductCategoryFilter(category)
+    setActiveMenu('products')
+  }
+
+  const updateProductImageDraft = (productId, value) => {
+    setProductImageDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [productId]: value,
+    }))
+  }
+
+  const saveProductImageDraft = (productId) => {
+    const nextImage = String(productImageDrafts[productId] || '').trim()
+
+    if (!nextImage) {
+      return
+    }
+
+    onUpdateProductImage(productId, nextImage)
+    setProductImageDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [productId]: '',
+    }))
+  }
 
   const renderDashboard = () => (
     <div className="admin-section-stack">
@@ -507,7 +564,7 @@ function AdminPage({
         </div>
       </div>
 
-      <div className="admin-record-list">
+      <div className="admin-record-list admin-record-list--split">
         {filteredOrders.map((order) => (
           <article key={order.id} className="admin-record-card">
             <div className="admin-record-head">
@@ -555,53 +612,173 @@ function AdminPage({
       <div className="admin-panel-head admin-panel-head--spread">
         <div>
           <p className="admin-panel-kicker">Products management</p>
-          <h2>Control catalog data, stock, pricing, and media.</h2>
+          <h2>Control every live storefront product from one place.</h2>
         </div>
-        <div className="admin-action-grid admin-action-grid--compact">
-          {['Add Product', 'Edit Product', 'Delete Product', 'Manage Stock'].map((action) => (
-            <button key={action} type="button" className="admin-ghost-button">
-              {action}
+        <div className="admin-chip-row">
+          <button
+            type="button"
+            className={`admin-filter-chip ${activeProductCategoryFilter === 'all' ? 'is-active' : ''}`}
+            onClick={() => setActiveProductCategoryFilter('all')}
+          >
+            All Products ({inventoryRows.length})
+          </button>
+          {categoryRows.map((category) => (
+            <button
+              key={category.name}
+              type="button"
+              className={`admin-filter-chip ${activeProductCategoryFilter === category.name ? 'is-active' : ''}`}
+              onClick={() => setActiveProductCategoryFilter(category.name)}
+            >
+              {category.name} ({category.products})
             </button>
           ))}
         </div>
       </div>
 
-      <div className="admin-record-list">
-        {inventoryRows.map((product) => (
-          <article key={product.id} className="admin-record-card">
-            <div className="admin-record-head">
-              <div>
-                <strong>{product.name}</strong>
-                <p>{product.category}</p>
+      <div className="admin-record-list admin-record-list--catalog">
+        {filteredInventoryRows.length ? (
+          filteredInventoryRows.map((product) => (
+            <article key={product.id} className="admin-record-card">
+              <div className="admin-record-head">
+                <div>
+                  <strong>{product.name}</strong>
+                  <p>{product.category}</p>
+                </div>
+                <span className={`admin-status-pill admin-status-pill--${getStatusTone(product.status)}`}>
+                  {product.status}
+                </span>
               </div>
-              <span className={`admin-status-pill admin-status-pill--${getStatusTone(product.status)}`}>
-                {product.status}
-              </span>
-            </div>
-            <div className="admin-record-grid">
-              <div className="admin-record-field">
-                <span>Price</span>
-                <strong>Rs. {product.price}</strong>
+              <div className="admin-product-media">
+                <div className="admin-product-visual">
+                  <img src={product.image} alt={product.name} loading="lazy" />
+                </div>
+                <div className="admin-product-gallery-strip" aria-label={`${product.name} gallery`}>
+                  {product.gallery.map((image, index) => (
+                    <button
+                      key={`${product.id}-gallery-${index}`}
+                      type="button"
+                      className={`admin-gallery-thumb ${product.image === image ? 'is-active' : ''}`}
+                      onClick={() => onUpdateProductImage(product.id, image)}
+                      aria-label={`Set gallery image ${index + 1} as cover for ${product.name}`}
+                    >
+                      <img src={image} alt={`${product.name} gallery ${index + 1}`} loading="lazy" />
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="admin-record-field">
-                <span>Discount</span>
-                <strong>{product.discount}</strong>
+              <div className="admin-record-grid">
+                <div className="admin-record-field">
+                  <span>Price</span>
+                  <strong>Rs. {product.price}</strong>
+                </div>
+                <div className="admin-record-field">
+                  <span>Discount</span>
+                  <strong>{product.discount}</strong>
+                </div>
+                <div className="admin-record-field">
+                  <span>Stock</span>
+                  <strong>{product.stock}</strong>
+                </div>
+                <div className="admin-record-field">
+                  <span>Sizes</span>
+                  <strong>{product.sizes}</strong>
+                </div>
+                <div className="admin-record-field">
+                  <span>Colors</span>
+                  <strong>{product.colors}</strong>
+                </div>
               </div>
-              <div className="admin-record-field">
-                <span>Stock</span>
-                <strong>{product.stock}</strong>
+              <div className="admin-product-controls">
+                <label className="admin-form-field">
+                  <span>Category</span>
+                  <select
+                    value={product.category}
+                    onChange={(event) => onUpdateProductCategory(product.id, event.target.value)}
+                  >
+                    {syncedCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="admin-form-field">
+                  <span>Stock control</span>
+                  <div className="admin-stock-stepper">
+                    <button
+                      type="button"
+                      className="admin-inline-button"
+                      onClick={() => onAdjustProductStock(product.id, -1)}
+                      disabled={product.stock <= 0}
+                    >
+                      -1
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      value={product.stock}
+                      onChange={(event) => onUpdateProductStock(product.id, event.target.value)}
+                      aria-label={`Stock count for ${product.name}`}
+                    />
+                    <button
+                      type="button"
+                      className="admin-inline-button"
+                      onClick={() => onAdjustProductStock(product.id, 1)}
+                    >
+                      +1
+                    </button>
+                  </div>
+                </div>
+
+                <label className="admin-form-field admin-form-field--wide">
+                  <span>Cover image URL</span>
+                  <div className="admin-image-editor">
+                    <input
+                      type="url"
+                      value={productImageDrafts[product.id] || ''}
+                      onChange={(event) => updateProductImageDraft(product.id, event.target.value)}
+                      placeholder="https://example.com/product-image.jpg"
+                      aria-label={`Cover image URL for ${product.name}`}
+                    />
+                    <button
+                      type="button"
+                      className="admin-inline-button"
+                      onClick={() => saveProductImageDraft(product.id)}
+                      disabled={!String(productImageDrafts[product.id] || '').trim()}
+                    >
+                      Save image
+                    </button>
+                  </div>
+                  <small className="admin-form-hint">
+                    Thumbnail par click karke existing gallery shot ko bhi storefront cover bana sakte ho.
+                  </small>
+                </label>
               </div>
-              <div className="admin-record-field">
-                <span>Sizes</span>
-                <strong>{product.sizes}</strong>
+              <div className="admin-record-actions">
+                <button
+                  type="button"
+                  className="admin-inline-button"
+                  onClick={() => onUpdateProductStock(product.id, product.stock ? 0 : 8)}
+                >
+                  {product.stock ? 'Mark Sold Out' : 'Restock Product'}
+                </button>
+                <button
+                  type="button"
+                  className="admin-inline-button"
+                  onClick={() => openCategoryProducts(product.category)}
+                >
+                  Open {product.category}
+                </button>
               </div>
-              <div className="admin-record-field">
-                <span>Colors</span>
-                <strong>{product.colors}</strong>
-              </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          ))
+        ) : (
+          <div className="admin-empty-state">
+            <strong>No products in this category</strong>
+            <p>Dusri category select karo ya storefront catalog me products ko move karo.</p>
+          </div>
+        )}
       </div>
     </section>
   )
@@ -611,22 +788,26 @@ function AdminPage({
       <div className="admin-panel-head admin-panel-head--spread">
         <div>
           <p className="admin-panel-kicker">Categories</p>
-          <h2>Add, edit, or retire top-level catalog buckets.</h2>
-        </div>
-        <div className="admin-action-grid admin-action-grid--compact">
-          {['Add Category', 'Edit Category', 'Delete Category'].map((action) => (
-            <button key={action} type="button" className="admin-ghost-button">
-              {action}
-            </button>
-          ))}
+          <h2>Exactly the same categories that customers see in the storefront.</h2>
         </div>
       </div>
       <div className="admin-tile-grid">
-        {sampleCategories.map((category) => (
-          <article key={category.name} className="admin-tile-card">
+        {categoryRows.map((category) => (
+          <article key={category.name} className="admin-tile-card admin-tile-card--category">
             <span>{category.name}</span>
             <strong>{category.products} products</strong>
             <p>{category.note}</p>
+            <div className="admin-category-stat-row">
+              <p>{category.liveCount} live</p>
+              <p>{category.soldOutCount} sold out</p>
+            </div>
+            <button
+              type="button"
+              className="admin-inline-button"
+              onClick={() => openCategoryProducts(category.name)}
+            >
+              Manage {category.name}
+            </button>
           </article>
         ))}
       </div>
@@ -741,7 +922,7 @@ function AdminPage({
         </article>
       ) : null}
 
-      <div className="admin-record-list admin-record-list--roomy">
+      <div className="admin-record-list admin-record-list--split admin-record-list--roomy">
         {customerRows.length ? (
           customerRows.map((customer) => (
             <article
@@ -828,7 +1009,7 @@ function AdminPage({
           ))}
         </div>
       </div>
-      <div className="admin-record-list">
+      <div className="admin-record-list admin-record-list--split">
         {filteredPayments.map((payment) => (
           <article key={payment.id} className="admin-record-card">
             <div className="admin-record-head">
@@ -893,7 +1074,7 @@ function AdminPage({
           <h2>Moderate product feedback before it appears live.</h2>
         </div>
       </div>
-      <div className="admin-record-list">
+      <div className="admin-record-list admin-record-list--split">
         {reviewRows.map((review) => (
           <article key={review.id} className="admin-record-card">
             <div className="admin-record-head">
@@ -1079,55 +1260,77 @@ function AdminPage({
     <main className="admin-page">
       <div className="admin-shell">
         <aside className="admin-sidebar">
-          <button type="button" className="admin-back-button" onClick={onBack}>
-            <Icon name="left" />
-            Back to Store
-          </button>
+          <div className="admin-sidebar-top">
+            <button type="button" className="admin-back-button" onClick={onBack}>
+              <Icon name="left" />
+              Back to Store
+            </button>
 
-          <div className="admin-sidebar-brand">
-            <p>Main Admin Menu</p>
-            <h1>ARYASS</h1>
-            <span>{adminName}</span>
+            <div className="admin-sidebar-brand">
+              <p>Admin Workspace</p>
+              <h1>ARYASS</h1>
+              <span>{adminName}</span>
+            </div>
           </div>
 
-          <nav className="admin-menu" aria-label="Admin sections">
-            {adminMenuItems.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                className={activeMenu === item.key ? 'is-active' : ''}
-                onClick={() => setActiveMenu(item.key)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
+          <div className="admin-sidebar-panel">
+            <span className="admin-sidebar-label">Navigation</span>
 
-          <div className="admin-sidebar-footer">
-            <span>Admin session active</span>
-            <button type="button" className="admin-logout-button" onClick={onLogout}>
-              Logout
-            </button>
+            <nav className="admin-menu" aria-label="Admin sections">
+              {adminMenuItems.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={activeMenu === item.key ? 'is-active' : ''}
+                  onClick={() => setActiveMenu(item.key)}
+                >
+                  <span>{item.label}</span>
+                  <small>{item.note}</small>
+                </button>
+              ))}
+
+              <div className="admin-sidebar-footer">
+                <span>Admin session active</span>
+                <button type="button" className="admin-logout-button" onClick={onLogout}>
+                  Logout
+                </button>
+              </div>
+            </nav>
           </div>
         </aside>
 
         <section className="admin-content">
-          <header className="admin-hero-card">
-            <div>
-              <p className="admin-kicker">Admin Control Room</p>
-              <h2>{activeSectionLabel}</h2>
-              <p>
-                Manage orders, products, customers, payments, reviews, reports, and store settings
-                from one polished responsive panel.
-              </p>
-            </div>
-            <div className="admin-hero-meta">
-              <span>Logged in as</span>
-              <strong>{adminName}</strong>
-            </div>
-          </header>
+          <div className="admin-content-inner">
+            <header className="admin-hero-card">
+              <div className="admin-hero-copy">
+                <div className="admin-hero-heading">
+                  <p className="admin-kicker">Admin Control Room</p>
+                  <h2>{activeSectionLabel}</h2>
+                  <p className="admin-hero-description">
+                    Professional operations view for orders, products, customers, payments, and reports.
+                  </p>
+                </div>
 
-          {activeContent}
+                <div className="admin-hero-chip-row" aria-label="Admin overview highlights">
+                  {heroHighlights.map((item) => (
+                    <span key={item} className="admin-hero-chip">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="admin-hero-meta">
+                <span>Logged in as</span>
+                <strong>{adminName}</strong>
+                <p>
+                  {activeSectionLabel} workspace active with a responsive admin-ready layout.
+                </p>
+              </div>
+            </header>
+
+            {activeContent}
+          </div>
         </section>
       </div>
     </main>
