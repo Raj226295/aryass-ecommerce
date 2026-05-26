@@ -140,6 +140,125 @@ function persistAuthState({ isLoggedIn, accountProfile, isAdminPageOpen }) {
   }
 }
 
+function getDefaultManagedDeliveryMeta() {
+  return [
+    { icon: 'shipping', title: 'Estimated delivery', text: '2-6 business days' },
+    { icon: 'return', title: 'Easy returns', text: 'Within 7 days of delivery' },
+    { icon: 'lock', title: 'Secure payment', text: '100% safe checkout flow' },
+  ]
+}
+
+function normalizeStoredManagedProduct(storedProduct, fallbackProduct = null) {
+  const baseProduct = fallbackProduct || {}
+  const resolvedCategory = mobileMenuItems.includes(storedProduct?.category)
+    ? storedProduct.category
+    : baseProduct.category || defaultCategory
+  const resolvedName =
+    String(storedProduct?.name || baseProduct.name || `Untitled ${resolvedCategory}`).trim() ||
+    `Untitled ${resolvedCategory}`
+  const resolvedPrice =
+    normalizeManagedPriceInput(storedProduct?.price, baseProduct.price || '1,999.00') ||
+    baseProduct.price ||
+    '1,999.00'
+  const resolvedOldPrice = Object.hasOwn(storedProduct || {}, 'oldPrice')
+    ? normalizeManagedPriceInput(storedProduct?.oldPrice, '')
+    : baseProduct.oldPrice
+  const resolvedStockCount = Math.max(
+    0,
+    Number(storedProduct?.stockCount ?? baseProduct.stockCount ?? 0) || 0,
+  )
+  const resolvedSoldOut = resolvedStockCount === 0
+  const resolvedImage = String(storedProduct?.image || baseProduct.image || '').trim()
+  const resolvedGallery = normalizeManagedGalleryImages(
+    storedProduct?.gallery ?? baseProduct.gallery ?? [resolvedImage],
+    resolvedImage,
+  )
+  const resolvedColors = normalizeManagedList(
+    storedProduct?.colors ?? baseProduct.colors ?? ['Ivory', 'Black'],
+  )
+  const resolvedSizes = normalizeManagedSizes(
+    storedProduct?.sizes ?? baseProduct.sizes,
+    baseProduct.sizes,
+    resolvedSoldOut,
+  )
+  const resolvedDescription = normalizeManagedParagraphs(
+    storedProduct?.description ??
+      baseProduct.description ?? [
+        `${resolvedName} ko premium storefront listing ke liye detailed description chahiye.`,
+      ],
+  )
+  const resolvedStyleNotes = normalizeManagedLineList(
+    storedProduct?.styleNotes ??
+      baseProduct.styleNotes ?? [
+        `Perfect for ${resolvedCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`,
+      ],
+  )
+  const resolvedDeliveryMeta =
+    Array.isArray(storedProduct?.deliveryMeta) && storedProduct.deliveryMeta.length
+      ? storedProduct.deliveryMeta
+      : Array.isArray(baseProduct.deliveryMeta) && baseProduct.deliveryMeta.length
+        ? baseProduct.deliveryMeta
+        : getDefaultManagedDeliveryMeta()
+  const normalizedProduct = {
+    ...baseProduct,
+    ...storedProduct,
+    id: storedProduct?.id || baseProduct.id,
+    name: resolvedName,
+    price: resolvedPrice,
+    oldPrice: resolvedOldPrice || undefined,
+    priceValue: Number(String(resolvedPrice || 0).replace(/,/g, '')),
+    category: resolvedCategory,
+    image: resolvedImage || resolvedGallery[0] || baseProduct.image || '',
+    gallery:
+      resolvedGallery.length
+        ? resolvedGallery
+        : [resolvedImage || baseProduct.image].filter(Boolean),
+    colors: resolvedColors.length ? resolvedColors : baseProduct.colors || ['Ivory', 'Black'],
+    sizes: resolvedSizes,
+    stockCount: resolvedStockCount,
+    soldOut: resolvedSoldOut,
+    shippingNote:
+      String(storedProduct?.shippingNote || baseProduct.shippingNote || '').trim() ||
+      'Free shipping above Rs. 1,999',
+    sku:
+      String(storedProduct?.sku || baseProduct.sku || '').trim().toUpperCase() ||
+      `ARY-CUSTOM-${resolvedCategory.slice(0, 2).toUpperCase()}`,
+    label: String(storedProduct?.label || baseProduct.label || '').trim() || 'Aryass Edit',
+    description:
+      resolvedDescription.length
+        ? resolvedDescription
+        : baseProduct.description || [`${resolvedName} is ready for a better storefront story.`],
+    styleNotes:
+      resolvedStyleNotes.length
+        ? resolvedStyleNotes
+        : baseProduct.styleNotes || [
+            `Perfect for ${resolvedCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`,
+          ],
+    deliveryMeta: resolvedDeliveryMeta,
+    storyTitle:
+      String(storedProduct?.storyTitle || baseProduct.storyTitle || '').trim() ||
+      `${resolvedName} for polished moments`,
+    storyText:
+      String(storedProduct?.storyText || baseProduct.storyText || '').trim() ||
+      'Aryass pieces are designed to move from intimate celebrations to elevated city looks without losing their soft, graceful appeal.',
+    saleBadgeText: String(storedProduct?.saleBadgeText || baseProduct.saleBadgeText || '').trim(),
+    rating: Number(storedProduct?.rating ?? baseProduct.rating ?? 0) || 0,
+    reviews: Number(storedProduct?.reviews ?? baseProduct.reviews ?? 0) || 0,
+    asSeenOn: Boolean(storedProduct?.asSeenOn ?? baseProduct.asSeenOn),
+  }
+
+  return {
+    ...normalizedProduct,
+    badges: buildManagedProductBadges(
+      normalizedProduct,
+      normalizedProduct.soldOut,
+      normalizedProduct.price,
+      normalizedProduct.oldPrice,
+      normalizedProduct.saleBadgeText,
+    ),
+  }
+}
+
 function mergeStoredProducts(storedProducts) {
   if (!Array.isArray(storedProducts) || !storedProducts.length) {
     return initialProducts
@@ -151,47 +270,27 @@ function mergeStoredProducts(storedProducts) {
       .map((product) => [product.id, product]),
   )
 
-  return initialProducts.map((product) => {
+  const mergedBaseProducts = initialProducts.map((product) => {
     const storedProduct = storedProductsById.get(product.id)
 
     if (!storedProduct) {
       return product
     }
 
-    return {
-      ...product,
-      ...storedProduct,
-      image: storedProduct.image || product.image,
-      gallery:
-        Array.isArray(storedProduct.gallery) && storedProduct.gallery.length
-          ? storedProduct.gallery
-          : product.gallery,
-      colors:
-        Array.isArray(storedProduct.colors) && storedProduct.colors.length
-          ? storedProduct.colors
-          : product.colors,
-      sizes:
-        Array.isArray(storedProduct.sizes) && storedProduct.sizes.length
-          ? storedProduct.sizes
-          : product.sizes,
-      badges:
-        Array.isArray(storedProduct.badges) && storedProduct.badges.length
-          ? storedProduct.badges
-          : product.badges,
-      description:
-        Array.isArray(storedProduct.description) && storedProduct.description.length
-          ? storedProduct.description
-          : product.description,
-      styleNotes:
-        Array.isArray(storedProduct.styleNotes) && storedProduct.styleNotes.length
-          ? storedProduct.styleNotes
-          : product.styleNotes,
-      deliveryMeta:
-        Array.isArray(storedProduct.deliveryMeta) && storedProduct.deliveryMeta.length
-          ? storedProduct.deliveryMeta
-          : product.deliveryMeta,
-    }
+    return normalizeStoredManagedProduct(storedProduct, product)
   })
+
+  const customProducts = storedProducts
+    .filter(
+      (product) =>
+        product &&
+        typeof product === 'object' &&
+        typeof product.id === 'string' &&
+        !initialProducts.some((initialProduct) => initialProduct.id === product.id),
+    )
+    .map((product) => normalizeStoredManagedProduct(product))
+
+  return [...customProducts, ...mergedBaseProducts]
 }
 
 function getStoredProducts() {
@@ -356,15 +455,38 @@ function getDefaultSize(product, preferredSize = '') {
   return product.sizes.find((size) => size.available)?.label || product.sizes[0]?.label || ''
 }
 
-function buildManagedProductBadges(product, soldOut) {
+function buildManagedProductBadges(
+  product,
+  soldOut,
+  nextPrice = product.price,
+  nextOldPrice = product.oldPrice,
+  nextSaleBadgeText = product.saleBadgeText,
+) {
   const badges = Array.isArray(product.badges) ? product.badges : []
-  const nextBadges = badges.filter((badge) => {
-    if (typeof badge === 'string') {
-      return badge !== 'Sold Out'
-    }
+  const nextBadges = badges
+    .map((badge) =>
+      typeof badge === 'string'
+        ? { text: badge, tone: 'neutral' }
+        : {
+            text: String(badge?.text || '').trim(),
+            tone: badge?.tone || 'neutral',
+          },
+    )
+    .filter((badge) => badge.text && badge.text !== 'Sold Out' && badge.tone !== 'sale')
 
-    return badge?.text !== 'Sold Out'
-  })
+  const saleBadgeText = String(nextSaleBadgeText || '').trim()
+  const oldPriceValue = Number(String(nextOldPrice || 0).replace(/,/g, ''))
+  const priceValue = Number(String(nextPrice || 0).replace(/,/g, ''))
+
+  if (saleBadgeText) {
+    nextBadges.unshift({ text: saleBadgeText, tone: 'sale' })
+  } else if (oldPriceValue > priceValue && priceValue > 0) {
+    const discountPercent = Math.round(((oldPriceValue - priceValue) / oldPriceValue) * 100)
+
+    if (discountPercent >= 5) {
+      nextBadges.unshift({ text: `${discountPercent}% Off`, tone: 'sale' })
+    }
+  }
 
   if (soldOut) {
     nextBadges.push({ text: 'Sold Out', tone: 'neutral' })
@@ -381,53 +503,302 @@ function buildProductSku(product, nextCategory) {
   return `${skuBase}-${nextCategory.slice(0, 2).toUpperCase()}`
 }
 
-function syncManagedProductInventory(product, nextStockValue) {
-  const stockCount = Math.max(0, Number(nextStockValue) || 0)
-  const soldOut = stockCount === 0
+function normalizeManagedPriceInput(value, fallback = '') {
+  const normalizedValue = String(value ?? '').replace(/[^0-9.]/g, '')
+  const numericValue = Number(normalizedValue)
 
-  return {
-    ...product,
-    stockCount,
-    soldOut,
-    badges: buildManagedProductBadges(product, soldOut),
-    sizes: product.sizes.map((size) => ({
-      ...size,
-      available: soldOut ? false : product.soldOut ? true : size.available,
-    })),
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    return fallback
   }
+
+  return numericValue.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
-function syncManagedProductCategory(product, nextCategory) {
-  const nextStyleNotes = [...product.styleNotes]
+function normalizeManagedList(value) {
+  const sourceValues = Array.isArray(value) ? value : String(value ?? '').split(/[\n,]+/)
+  const seenValues = new Set()
 
-  if (nextStyleNotes.length) {
-    nextStyleNotes[0] = `Perfect for ${nextCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`
-  }
+  return sourceValues.reduce((items, item) => {
+    const normalizedItem = String(item || '').trim()
+    const normalizedKey = normalizedItem.toLowerCase()
 
-  return {
-    ...product,
-    category: nextCategory,
-    sku: buildProductSku(product, nextCategory),
-    styleNotes: nextStyleNotes,
-  }
+    if (normalizedItem && !seenValues.has(normalizedKey)) {
+      seenValues.add(normalizedKey)
+      items.push(normalizedItem)
+    }
+
+    return items
+  }, [])
 }
 
-function syncManagedProductImage(product, nextImage) {
-  const normalizedImage = String(nextImage || '').trim()
+function normalizeManagedParagraphs(value) {
+  const sourceValues = Array.isArray(value)
+    ? value
+    : String(value ?? '')
+        .split(/\n\s*\n/)
+        .map((paragraph) => paragraph.replace(/\s*\n\s*/g, ' '))
 
-  if (!normalizedImage) {
-    return product
-  }
-
-  const nextGallery = [normalizedImage, ...(Array.isArray(product.gallery) ? product.gallery : [])]
+  return sourceValues
+    .map((item) => String(item || '').trim())
     .filter(Boolean)
-    .filter((image, index, gallery) => gallery.indexOf(image) === index)
+}
+
+function normalizeManagedLineList(value) {
+  const sourceValues = Array.isArray(value) ? value : String(value ?? '').split(/\n+/)
+
+  return sourceValues
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+}
+
+function normalizeManagedGalleryImages(value, coverImage = '') {
+  const sourceValues = Array.isArray(value) ? value : String(value ?? '').split(/\n+/)
+  const normalizedCoverImage = String(coverImage || '').trim()
+  const nextGallery = [...(normalizedCoverImage ? [normalizedCoverImage] : []), ...sourceValues]
+  const seenImages = new Set()
+
+  return nextGallery.reduce((images, image) => {
+    const normalizedImage = String(image || '').trim()
+
+    if (normalizedImage && !seenImages.has(normalizedImage)) {
+      seenImages.add(normalizedImage)
+      images.push(normalizedImage)
+    }
+
+    return images
+  }, [])
+}
+
+function normalizeManagedSizes(sizeInput, currentSizes = [], soldOut = false) {
+  const fallbackSizes =
+    Array.isArray(currentSizes) && currentSizes.length
+      ? currentSizes
+      : [
+          { label: 'S', available: true },
+          { label: 'M', available: true },
+          { label: 'L', available: true },
+        ]
+  const currentSizeAvailability = new Map(
+    fallbackSizes
+      .map((size) => [String(size?.label || '').trim().toUpperCase(), Boolean(size?.available)])
+      .filter(([label]) => label),
+  )
+  const sourceSizes =
+    Array.isArray(sizeInput) && sizeInput.length ? sizeInput : fallbackSizes
+  const nextSizes = sourceSizes
+    .map((size) => {
+      if (typeof size === 'string') {
+        const label = size.trim().toUpperCase()
+
+        return label
+          ? { label, available: currentSizeAvailability.get(label) ?? true }
+          : null
+      }
+
+      const label = String(size?.label || '').trim().toUpperCase()
+
+      if (!label) {
+        return null
+      }
+
+      return {
+        label,
+        available:
+          typeof size?.available === 'boolean'
+            ? size.available
+            : currentSizeAvailability.get(label) ?? true,
+      }
+    })
+    .filter(Boolean)
+    .filter((size, index, sizes) => sizes.findIndex((item) => item.label === size.label) === index)
+  const resolvedSizes = nextSizes.length
+    ? nextSizes
+    : fallbackSizes
+        .map((size) => ({
+          label: String(size?.label || '').trim().toUpperCase(),
+          available: Boolean(size?.available),
+        }))
+        .filter((size) => size.label)
+  const sizesWithStockState = resolvedSizes.map((size) => ({
+    ...size,
+    available: soldOut ? false : Boolean(size.available),
+  }))
+
+  if (!soldOut && sizesWithStockState.length && !sizesWithStockState.some((size) => size.available)) {
+    sizesWithStockState[0] = {
+      ...sizesWithStockState[0],
+      available: true,
+    }
+  }
+
+  return sizesWithStockState
+}
+
+function syncManagedProductDetails(product, nextDetails = {}) {
+  const nextCategory =
+    typeof nextDetails.category === 'string' && mobileMenuItems.includes(nextDetails.category)
+      ? nextDetails.category
+      : product.category
+  const nextSaleBadgeText = Object.hasOwn(nextDetails, 'saleBadgeText')
+    ? String(nextDetails.saleBadgeText || '').trim()
+    : String(product.saleBadgeText || '').trim()
+  const nextPrice =
+    Object.hasOwn(nextDetails, 'price')
+      ? normalizeManagedPriceInput(nextDetails.price, product.price)
+      : product.price
+  const nextOldPrice =
+    Object.hasOwn(nextDetails, 'oldPrice')
+      ? normalizeManagedPriceInput(nextDetails.oldPrice, '')
+      : product.oldPrice
+  const nextStockCount = Object.hasOwn(nextDetails, 'stockCount')
+    ? Math.max(0, Number(nextDetails.stockCount) || 0)
+    : product.stockCount
+  const soldOut = nextStockCount === 0
+  const nextColors = Object.hasOwn(nextDetails, 'colors')
+    ? normalizeManagedList(nextDetails.colors)
+    : product.colors
+  const nextDescription = Object.hasOwn(nextDetails, 'description')
+    ? normalizeManagedParagraphs(nextDetails.description)
+    : product.description
+  const nextStyleNotesBase = Object.hasOwn(nextDetails, 'styleNotes')
+    ? normalizeManagedLineList(nextDetails.styleNotes)
+    : product.styleNotes
+  const nextStyleNotes =
+    nextCategory !== product.category && !Object.hasOwn(nextDetails, 'styleNotes') && nextStyleNotesBase.length
+      ? [
+          `Perfect for ${nextCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`,
+          ...nextStyleNotesBase.slice(1),
+        ]
+      : nextStyleNotesBase
+  const requestedCoverImage = Object.hasOwn(nextDetails, 'coverImage')
+    ? String(nextDetails.coverImage || '').trim()
+    : product.image
+  const nextGallery =
+    Object.hasOwn(nextDetails, 'gallery') || Object.hasOwn(nextDetails, 'coverImage')
+      ? normalizeManagedGalleryImages(
+          Object.hasOwn(nextDetails, 'gallery') ? nextDetails.gallery : product.gallery,
+          requestedCoverImage,
+        )
+      : Array.isArray(product.gallery) && product.gallery.length
+        ? product.gallery
+        : [product.image].filter(Boolean)
+  const nextImage = requestedCoverImage || nextGallery[0] || product.image
+  const nextSizes = normalizeManagedSizes(
+    Object.hasOwn(nextDetails, 'sizes') ? nextDetails.sizes : product.sizes,
+    product.sizes,
+    soldOut,
+  )
+  const nextSku = Object.hasOwn(nextDetails, 'sku')
+    ? String(nextDetails.sku || '').trim().toUpperCase()
+    : nextCategory !== product.category
+      ? buildProductSku(product, nextCategory)
+      : product.sku
+  const nextProduct = {
+    ...product,
+    name: Object.hasOwn(nextDetails, 'name')
+      ? String(nextDetails.name || '').trim() || product.name
+      : product.name,
+    label: Object.hasOwn(nextDetails, 'label')
+      ? String(nextDetails.label || '').trim() || product.label
+      : product.label,
+    category: nextCategory,
+    price: nextPrice,
+    oldPrice: nextOldPrice || undefined,
+    priceValue: Number(String(nextPrice || 0).replace(/,/g, '')),
+    shippingNote: Object.hasOwn(nextDetails, 'shippingNote')
+      ? String(nextDetails.shippingNote || '').trim() || product.shippingNote
+      : product.shippingNote,
+    saleBadgeText: nextSaleBadgeText,
+    sku: nextSku || buildProductSku(product, nextCategory),
+    stockCount: nextStockCount,
+    soldOut,
+    image: nextImage,
+    gallery: nextGallery.length ? nextGallery : [nextImage],
+    colors: nextColors.length ? nextColors : product.colors,
+    sizes: nextSizes,
+    description: nextDescription.length ? nextDescription : product.description,
+    styleNotes: nextStyleNotes.length ? nextStyleNotes : product.styleNotes,
+    storyTitle: Object.hasOwn(nextDetails, 'storyTitle')
+      ? String(nextDetails.storyTitle || '').trim() || product.storyTitle
+      : product.storyTitle,
+    storyText: Object.hasOwn(nextDetails, 'storyText')
+      ? String(nextDetails.storyText || '').trim() || product.storyText
+      : product.storyText,
+  }
 
   return {
-    ...product,
-    image: normalizedImage,
-    gallery: nextGallery,
+    ...nextProduct,
+    badges: buildManagedProductBadges(
+      nextProduct,
+      soldOut,
+      nextProduct.price,
+      nextProduct.oldPrice,
+      nextProduct.saleBadgeText,
+    ),
   }
+}
+
+function isCustomManagedProductId(productId = '') {
+  return String(productId).startsWith('aryass-custom-')
+}
+
+function buildNewManagedProduct(products, preferredCategory = defaultCategory) {
+  const nextCategory = mobileMenuItems.includes(preferredCategory) ? preferredCategory : defaultCategory
+  const categoryTemplate =
+    products.find((product) => product.category === nextCategory) ||
+    products.find((product) => product.category === defaultCategory) ||
+    products[0] ||
+    null
+  const nextId = `aryass-custom-${Date.now()}`
+  const nextSku = `ARY-CUSTOM-${String(products.filter((product) => isCustomManagedProductId(product.id)).length + 1).padStart(3, '0')}`
+  const nextName = `New ${nextCategory}`
+  const templateImage =
+    categoryTemplate?.image ||
+    categoryTemplate?.gallery?.[0] ||
+    '/catalog/pexels-photo-34959983.jpeg'
+  const baseProduct = {
+    ...(categoryTemplate || {}),
+    id: nextId,
+    name: nextName,
+    category: nextCategory,
+    price: '1,999.00',
+    oldPrice: '',
+    rating: 0,
+    reviews: 0,
+    soldOut: false,
+    asSeenOn: false,
+    stockCount: 8,
+    image: templateImage,
+    gallery: [templateImage].filter(Boolean),
+    colors: ['Ivory', 'Champagne', 'Black'],
+    sizes: [
+      { label: 'XS', available: true },
+      { label: 'S', available: true },
+      { label: 'M', available: true },
+      { label: 'L', available: true },
+    ],
+    sku: nextSku,
+    shippingNote: 'Free shipping above Rs. 1,999',
+    label: 'New Launch',
+    description: [
+      `${nextName} ko admin se complete detail ke saath customise karke live storefront par publish kiya ja sakta hai.`,
+      'Fabric story, fit notes, aur occasion styling yahan add karke customer-facing product page ko complete banaya ja sakta hai.',
+    ],
+    styleNotes: [
+      `Perfect for ${nextCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`,
+      'Best styled with refined accessories, sleek footwear, and a confident evening mood.',
+    ],
+    deliveryMeta: getDefaultManagedDeliveryMeta(),
+    storyTitle: `${nextName} for polished moments`,
+    storyText:
+      'Aryass pieces are designed to move from intimate celebrations to elevated city looks without losing their soft, graceful appeal.',
+    saleBadgeText: '',
+  }
+
+  return normalizeStoredManagedProduct(baseProduct)
 }
 
 function App() {
@@ -721,36 +1092,65 @@ function App() {
     setMaxPriceInput('')
   }
 
+  const updateAdminProductDetails = (productId, nextDetails) => {
+    setProducts((currentProducts) =>
+      currentProducts.map((product) =>
+        product.id === productId ? syncManagedProductDetails(product, nextDetails) : product,
+      ),
+    )
+  }
+
+  const createAdminProduct = (preferredCategory) => {
+    const nextProduct = buildNewManagedProduct(products, preferredCategory)
+
+    setProducts((currentProducts) => [nextProduct, ...currentProducts])
+    return nextProduct
+  }
+
+  const deleteAdminProduct = (productId) => {
+    if (!isCustomManagedProductId(productId)) {
+      return false
+    }
+
+    setProducts((currentProducts) =>
+      currentProducts.filter((product) => product.id !== productId),
+    )
+    setWishlistItems((currentItems) => currentItems.filter((item) => item.id !== productId))
+    setCartItems((currentItems) => currentItems.filter((item) => item.id !== productId))
+    setCheckoutItems((currentItems) => currentItems.filter((item) => item.id !== productId))
+
+    if (selectedProductId === productId) {
+      setSelectedProductId(null)
+      setSelectedImage('')
+      setSelectedColor('')
+      setSelectedSize('')
+    }
+
+    return true
+  }
+
   const updateAdminProductCategory = (productId, nextCategory) => {
     if (!mobileMenuItems.includes(nextCategory)) {
       return
     }
 
-    setProducts((currentProducts) =>
-      currentProducts.map((product) =>
-        product.id === productId ? syncManagedProductCategory(product, nextCategory) : product,
-      ),
-    )
+    updateAdminProductDetails(productId, { category: nextCategory })
   }
 
   const updateAdminProductStock = (productId, nextStockValue) => {
-    setProducts((currentProducts) =>
-      currentProducts.map((product) =>
-        product.id === productId
-          ? syncManagedProductInventory(product, nextStockValue)
-          : product,
-      ),
-    )
+    updateAdminProductDetails(productId, { stockCount: nextStockValue })
   }
 
   const adjustAdminProductStock = (productId, change) => {
-    setProducts((currentProducts) =>
-      currentProducts.map((product) =>
-        product.id === productId
-          ? syncManagedProductInventory(product, product.stockCount + change)
-          : product,
-      ),
-    )
+    const selectedProduct = products.find((product) => product.id === productId)
+
+    if (!selectedProduct) {
+      return
+    }
+
+    updateAdminProductDetails(productId, {
+      stockCount: selectedProduct.stockCount + change,
+    })
   }
 
   const updateAdminProductImage = (productId, nextImage) => {
@@ -760,11 +1160,9 @@ function App() {
       return
     }
 
-    setProducts((currentProducts) =>
-      currentProducts.map((product) =>
-        product.id === productId ? syncManagedProductImage(product, normalizedImage) : product,
-      ),
-    )
+    updateAdminProductDetails(productId, {
+      coverImage: normalizedImage,
+    })
   }
 
   const handlePageChange = (nextPage) => {
@@ -1516,6 +1914,9 @@ function App() {
           accountProfile={accountProfile}
           menuCategories={mobileMenuItems}
           categoryContentByCategory={collectionContentByCategory}
+          onCreateProduct={createAdminProduct}
+          onDeleteProduct={deleteAdminProduct}
+          onUpdateProductDetails={updateAdminProductDetails}
           onUpdateProductCategory={updateAdminProductCategory}
           onUpdateProductStock={updateAdminProductStock}
           onAdjustProductStock={adjustAdminProductStock}

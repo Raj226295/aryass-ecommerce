@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Icon from './Icon'
 
 const adminMenuItems = [
@@ -191,6 +191,18 @@ function mapOrderStatus(status = '', index = 0) {
 function getStatusTone(status = '') {
   const normalized = status.toLowerCase()
 
+  if (normalized.includes('in stock')) {
+    return 'success'
+  }
+
+  if (normalized.includes('low stock')) {
+    return 'warning'
+  }
+
+  if (normalized.includes('out of stock')) {
+    return 'danger'
+  }
+
   if (normalized.includes('deliver') || normalized.includes('paid') || normalized.includes('approve')) {
     return 'success'
   }
@@ -277,6 +289,68 @@ function buildInitialCustomers(accountProfile) {
   return alreadyExists ? nextRows : [adminCustomer, ...nextRows]
 }
 
+function createProductEditorState(product) {
+  return {
+    name: product.name,
+    label: product.label || '',
+    category: product.category,
+    price: product.price,
+    oldPrice: product.oldPrice || '',
+    saleBadgeText: product.saleBadgeText || '',
+    shippingNote: product.shippingNote || '',
+    sku: product.sku || '',
+    stockCount: String(product.stockCount ?? 0),
+    coverImage: product.image || '',
+    gallery: Array.isArray(product.gallery) ? product.gallery.join('\n') : product.image || '',
+    colors: Array.isArray(product.colors) ? product.colors.join(', ') : '',
+    sizes: Array.isArray(product.sizes) ? product.sizes.map((size) => ({ ...size })) : [],
+    description: Array.isArray(product.description) ? product.description.join('\n\n') : '',
+    styleNotes: Array.isArray(product.styleNotes) ? product.styleNotes.join('\n') : '',
+    storyTitle: product.storyTitle || '',
+    storyText: product.storyText || '',
+  }
+}
+
+function parseEditorList(value) {
+  const sourceValues = Array.isArray(value) ? value : String(value || '').split(/[\n,]+/)
+  const seenValues = new Set()
+
+  return sourceValues.reduce((items, item) => {
+    const normalizedItem = String(item || '').trim()
+    const normalizedKey = normalizedItem.toLowerCase()
+
+    if (normalizedItem && !seenValues.has(normalizedKey)) {
+      seenValues.add(normalizedKey)
+      items.push(normalizedItem)
+    }
+
+    return items
+  }, [])
+}
+
+function parseEditorParagraphs(value) {
+  return String(value || '')
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.replace(/\s*\n\s*/g, ' ').trim())
+    .filter(Boolean)
+}
+
+function getInventoryStatus(product) {
+  if (product.soldOut) {
+    return 'Out of Stock'
+  }
+
+  if (product.stockCount < 6) {
+    return 'Low Stock'
+  }
+
+  return 'In Stock'
+}
+
+function isCustomProduct(productId = '') {
+  return String(productId).startsWith('aryass-custom-')
+}
+
 function AdminPage({
   onBack,
   onLogout,
@@ -287,17 +361,20 @@ function AdminPage({
   accountProfile,
   menuCategories,
   categoryContentByCategory,
-  onUpdateProductCategory,
-  onUpdateProductStock,
-  onAdjustProductStock,
-  onUpdateProductImage,
+  onCreateProduct,
+  onDeleteProduct,
+  onUpdateProductDetails,
 }) {
   const [activeMenu, setActiveMenu] = useState('dashboard')
   const [activeOrderFilter, setActiveOrderFilter] = useState('all')
   const [activePaymentFilter, setActivePaymentFilter] = useState('all')
   const [activeCustomerFilter, setActiveCustomerFilter] = useState('all')
   const [activeProductCategoryFilter, setActiveProductCategoryFilter] = useState('all')
-  const [productImageDrafts, setProductImageDrafts] = useState({})
+  const [selectedAdminProductId, setSelectedAdminProductId] = useState(() => products[0]?.id || '')
+  const [productEditor, setProductEditor] = useState(() =>
+    products[0] ? createProductEditorState(products[0]) : null,
+  )
+  const [productEditorNotice, setProductEditorNotice] = useState('')
   const [managedCustomers, setManagedCustomers] = useState(() => buildInitialCustomers(accountProfile))
   const [selectedCustomerId, setSelectedCustomerId] = useState(
     () => buildInitialCustomers(accountProfile)[0]?.id || '',
@@ -374,10 +451,10 @@ function AdminPage({
       status: product.soldOut ? 'Out of Stock' : product.stockCount < 6 ? 'Low Stock' : 'In Stock',
     }
   })
-  const filteredInventoryRows =
+  const filteredManagedProducts =
     activeProductCategoryFilter === 'all'
-      ? inventoryRows
-      : inventoryRows.filter((product) => product.category === activeProductCategoryFilter)
+      ? products
+      : products.filter((product) => product.category === activeProductCategoryFilter)
   const categoryRows = syncedCategories.map((category) => {
     const categoryProducts = products.filter((product) => product.category === category)
     const liveCount = categoryProducts.filter((product) => !product.soldOut).length
@@ -393,6 +470,46 @@ function AdminPage({
         'Customer storefront ke saath synced category listing.',
     }
   })
+  const selectedManagedProduct =
+    filteredManagedProducts.find((product) => product.id === selectedAdminProductId) ||
+    filteredManagedProducts[0] ||
+    null
+  const filteredLowStockCount = filteredManagedProducts.filter(
+    (product) => !product.soldOut && product.stockCount < 6,
+  ).length
+  const filteredSoldOutCount = filteredManagedProducts.filter((product) => product.soldOut).length
+  const filteredRichGalleryCount = filteredManagedProducts.filter(
+    (product) => Array.isArray(product.gallery) && product.gallery.length >= 4,
+  ).length
+
+  useEffect(() => {
+    if (filteredManagedProducts.length) {
+      const isSelectedProductVisible = filteredManagedProducts.some(
+        (product) => product.id === selectedAdminProductId,
+      )
+
+      if (!isSelectedProductVisible) {
+        setSelectedAdminProductId(filteredManagedProducts[0].id)
+      }
+
+      return
+    }
+
+    if (selectedAdminProductId) {
+      setSelectedAdminProductId('')
+    }
+  }, [filteredManagedProducts, selectedAdminProductId])
+
+  useEffect(() => {
+    if (!selectedManagedProduct) {
+      setProductEditor(null)
+      setProductEditorNotice('')
+      return
+    }
+
+    setProductEditor(createProductEditorState(selectedManagedProduct))
+    setProductEditorNotice('')
+  }, [selectedManagedProduct?.id])
 
   const customerRows =
     activeCustomerFilter === 'all'
@@ -445,26 +562,177 @@ function AdminPage({
     setActiveMenu('products')
   }
 
-  const updateProductImageDraft = (productId, value) => {
-    setProductImageDrafts((currentDrafts) => ({
-      ...currentDrafts,
-      [productId]: value,
-    }))
-  }
+  const createNewProductDraft = () => {
+    const preferredCategory =
+      activeProductCategoryFilter === 'all'
+        ? selectedManagedProduct?.category || syncedCategories[0]
+        : activeProductCategoryFilter
+    const nextProduct = onCreateProduct(preferredCategory)
 
-  const saveProductImageDraft = (productId) => {
-    const nextImage = String(productImageDrafts[productId] || '').trim()
-
-    if (!nextImage) {
+    if (!nextProduct) {
       return
     }
 
-    onUpdateProductImage(productId, nextImage)
-    setProductImageDrafts((currentDrafts) => ({
-      ...currentDrafts,
-      [productId]: '',
-    }))
+    setSelectedAdminProductId(nextProduct.id)
+    setProductEditor(createProductEditorState(nextProduct))
+    setProductEditorNotice('New product draft created. Ab fields fill karke save karo.')
   }
+
+  const normalizeEditorSizesForStock = (sizes, stockCount) => {
+    const nextStockCount = Math.max(0, Number(stockCount) || 0)
+    const normalizedSizes = sizes.map((size) => ({
+      ...size,
+      available: nextStockCount === 0 ? false : Boolean(size.available),
+    }))
+
+    if (nextStockCount > 0 && normalizedSizes.length && !normalizedSizes.some((size) => size.available)) {
+      normalizedSizes[0] = {
+        ...normalizedSizes[0],
+        available: true,
+      }
+    }
+
+    return normalizedSizes
+  }
+
+  const updateProductEditorField = (field, value) => {
+    setProductEditor((currentEditor) =>
+      currentEditor
+        ? {
+            ...currentEditor,
+            [field]: value,
+          }
+        : currentEditor,
+    )
+    setProductEditorNotice('')
+  }
+
+  const updateProductEditorStock = (nextStockValue) => {
+    setProductEditor((currentEditor) => {
+      if (!currentEditor) {
+        return currentEditor
+      }
+
+      return {
+        ...currentEditor,
+        stockCount: String(Math.max(0, Number(nextStockValue) || 0)),
+        sizes: normalizeEditorSizesForStock(currentEditor.sizes, nextStockValue),
+      }
+    })
+    setProductEditorNotice('')
+  }
+
+  const updateProductEditorSizeList = (value) => {
+    const nextLabels = parseEditorList(value).map((size) => size.toUpperCase())
+
+    setProductEditor((currentEditor) => {
+      if (!currentEditor) {
+        return currentEditor
+      }
+
+      const currentSizesByLabel = new Map(
+        currentEditor.sizes.map((size) => [size.label.toUpperCase(), Boolean(size.available)]),
+      )
+      const nextSizes = nextLabels.length
+        ? nextLabels.map((label) => ({
+            label,
+            available: currentSizesByLabel.get(label) ?? true,
+          }))
+        : []
+
+      return {
+        ...currentEditor,
+        sizes: normalizeEditorSizesForStock(nextSizes, currentEditor.stockCount),
+      }
+    })
+    setProductEditorNotice('')
+  }
+
+  const toggleProductEditorSize = (sizeLabel) => {
+    setProductEditor((currentEditor) => {
+      if (!currentEditor) {
+        return currentEditor
+      }
+
+      const toggledSizes = currentEditor.sizes.map((size) =>
+        size.label === sizeLabel
+          ? {
+              ...size,
+              available: !size.available,
+            }
+          : size,
+      )
+
+      return {
+        ...currentEditor,
+        sizes: normalizeEditorSizesForStock(toggledSizes, currentEditor.stockCount),
+      }
+    })
+    setProductEditorNotice('')
+  }
+
+  const resetProductEditor = () => {
+    if (!selectedManagedProduct) {
+      return
+    }
+
+    setProductEditor(createProductEditorState(selectedManagedProduct))
+    setProductEditorNotice('Unsaved edits discarded.')
+  }
+
+  const saveProductEditor = () => {
+    if (!selectedManagedProduct || !productEditor) {
+      return
+    }
+
+    onUpdateProductDetails(selectedManagedProduct.id, {
+      name: productEditor.name,
+      label: productEditor.label,
+      category: productEditor.category,
+      price: productEditor.price,
+      oldPrice: productEditor.oldPrice,
+      saleBadgeText: productEditor.saleBadgeText,
+      shippingNote: productEditor.shippingNote,
+      sku: productEditor.sku,
+      stockCount: productEditor.stockCount,
+      coverImage: productEditor.coverImage,
+      gallery: parseEditorList(productEditor.gallery),
+      colors: parseEditorList(productEditor.colors),
+      sizes: productEditor.sizes,
+      description: parseEditorParagraphs(productEditor.description),
+      styleNotes: String(productEditor.styleNotes || '')
+        .split(/\n+/)
+        .map((note) => note.trim())
+        .filter(Boolean),
+      storyTitle: productEditor.storyTitle,
+      storyText: productEditor.storyText,
+    })
+    setProductEditorNotice('Storefront product updated successfully.')
+  }
+
+  const deleteSelectedProduct = () => {
+    if (!selectedManagedProduct || !isCustomProduct(selectedManagedProduct.id)) {
+      return
+    }
+
+    const isDeleted = onDeleteProduct(selectedManagedProduct.id)
+
+    if (isDeleted) {
+      setProductEditorNotice('Custom product removed from the catalog.')
+    }
+  }
+
+  const editorGalleryPreview = parseEditorList(productEditor?.gallery)
+  const editorCoverImagePreview =
+    String(productEditor?.coverImage || '').trim() ||
+    editorGalleryPreview[0] ||
+    selectedManagedProduct?.image ||
+    ''
+  const editorColorPreview = parseEditorList(productEditor?.colors)
+  const editorDescriptionPreview = parseEditorParagraphs(productEditor?.description)
+  const editorAvailableSizes = Array.isArray(productEditor?.sizes)
+    ? productEditor.sizes.filter((size) => size.available).map((size) => size.label)
+    : []
 
   const renderDashboard = () => (
     <div className="admin-section-stack">
@@ -608,178 +876,535 @@ function AdminPage({
   )
 
   const renderProducts = () => (
-    <section className="admin-panel">
+    <section className="admin-panel admin-panel--product-studio">
       <div className="admin-panel-head admin-panel-head--spread">
         <div>
           <p className="admin-panel-kicker">Products management</p>
-          <h2>Control every live storefront product from one place.</h2>
+          <h2>Control every live storefront product from one focused workspace.</h2>
+          <p>
+            Description, cover image, gallery, colors, sizes, stock, pricing, aur story copy sab
+            yahin se manage karo.
+          </p>
         </div>
-        <div className="admin-chip-row">
-          <button
-            type="button"
-            className={`admin-filter-chip ${activeProductCategoryFilter === 'all' ? 'is-active' : ''}`}
-            onClick={() => setActiveProductCategoryFilter('all')}
-          >
-            All Products ({inventoryRows.length})
-          </button>
-          {categoryRows.map((category) => (
+        <div className="admin-product-studio-toolbar">
+          <div className="admin-chip-row">
             <button
-              key={category.name}
               type="button"
-              className={`admin-filter-chip ${activeProductCategoryFilter === category.name ? 'is-active' : ''}`}
-              onClick={() => setActiveProductCategoryFilter(category.name)}
+              className={`admin-filter-chip ${activeProductCategoryFilter === 'all' ? 'is-active' : ''}`}
+              onClick={() => setActiveProductCategoryFilter('all')}
             >
-              {category.name} ({category.products})
+              All Products ({inventoryRows.length})
             </button>
-          ))}
+            {categoryRows.map((category) => (
+              <button
+                key={category.name}
+                type="button"
+                className={`admin-filter-chip ${activeProductCategoryFilter === category.name ? 'is-active' : ''}`}
+                onClick={() => setActiveProductCategoryFilter(category.name)}
+              >
+                {category.name} ({category.products})
+              </button>
+            ))}
+          </div>
+
+          <button type="button" className="admin-ghost-button" onClick={createNewProductDraft}>
+            Add new product
+          </button>
         </div>
       </div>
 
-      <div className="admin-record-list admin-record-list--catalog">
-        {filteredInventoryRows.length ? (
-          filteredInventoryRows.map((product) => (
-            <article key={product.id} className="admin-record-card">
-              <div className="admin-record-head">
-                <div>
-                  <strong>{product.name}</strong>
-                  <p>{product.category}</p>
-                </div>
-                <span className={`admin-status-pill admin-status-pill--${getStatusTone(product.status)}`}>
-                  {product.status}
-                </span>
-              </div>
-              <div className="admin-product-media">
-                <div className="admin-product-visual">
-                  <img src={product.image} alt={product.name} loading="lazy" />
-                </div>
-                <div className="admin-product-gallery-strip" aria-label={`${product.name} gallery`}>
-                  {product.gallery.map((image, index) => (
-                    <button
-                      key={`${product.id}-gallery-${index}`}
-                      type="button"
-                      className={`admin-gallery-thumb ${product.image === image ? 'is-active' : ''}`}
-                      onClick={() => onUpdateProductImage(product.id, image)}
-                      aria-label={`Set gallery image ${index + 1} as cover for ${product.name}`}
-                    >
-                      <img src={image} alt={`${product.name} gallery ${index + 1}`} loading="lazy" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="admin-record-grid">
-                <div className="admin-record-field">
-                  <span>Price</span>
-                  <strong>Rs. {product.price}</strong>
-                </div>
-                <div className="admin-record-field">
-                  <span>Discount</span>
-                  <strong>{product.discount}</strong>
-                </div>
-                <div className="admin-record-field">
-                  <span>Stock</span>
-                  <strong>{product.stock}</strong>
-                </div>
-                <div className="admin-record-field">
-                  <span>Sizes</span>
-                  <strong>{product.sizes}</strong>
-                </div>
-                <div className="admin-record-field">
-                  <span>Colors</span>
-                  <strong>{product.colors}</strong>
-                </div>
-              </div>
-              <div className="admin-product-controls">
-                <label className="admin-form-field">
-                  <span>Category</span>
-                  <select
-                    value={product.category}
-                    onChange={(event) => onUpdateProductCategory(product.id, event.target.value)}
-                  >
-                    {syncedCategories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <div className="admin-form-field">
-                  <span>Stock control</span>
-                  <div className="admin-stock-stepper">
-                    <button
-                      type="button"
-                      className="admin-inline-button"
-                      onClick={() => onAdjustProductStock(product.id, -1)}
-                      disabled={product.stock <= 0}
-                    >
-                      -1
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      value={product.stock}
-                      onChange={(event) => onUpdateProductStock(product.id, event.target.value)}
-                      aria-label={`Stock count for ${product.name}`}
-                    />
-                    <button
-                      type="button"
-                      className="admin-inline-button"
-                      onClick={() => onAdjustProductStock(product.id, 1)}
-                    >
-                      +1
-                    </button>
-                  </div>
-                </div>
-
-                <label className="admin-form-field admin-form-field--wide">
-                  <span>Cover image URL</span>
-                  <div className="admin-image-editor">
-                    <input
-                      type="url"
-                      value={productImageDrafts[product.id] || ''}
-                      onChange={(event) => updateProductImageDraft(product.id, event.target.value)}
-                      placeholder="https://example.com/product-image.jpg"
-                      aria-label={`Cover image URL for ${product.name}`}
-                    />
-                    <button
-                      type="button"
-                      className="admin-inline-button"
-                      onClick={() => saveProductImageDraft(product.id)}
-                      disabled={!String(productImageDrafts[product.id] || '').trim()}
-                    >
-                      Save image
-                    </button>
-                  </div>
-                  <small className="admin-form-hint">
-                    Thumbnail par click karke existing gallery shot ko bhi storefront cover bana sakte ho.
-                  </small>
-                </label>
-              </div>
-              <div className="admin-record-actions">
-                <button
-                  type="button"
-                  className="admin-inline-button"
-                  onClick={() => onUpdateProductStock(product.id, product.stock ? 0 : 8)}
-                >
-                  {product.stock ? 'Mark Sold Out' : 'Restock Product'}
-                </button>
-                <button
-                  type="button"
-                  className="admin-inline-button"
-                  onClick={() => openCategoryProducts(product.category)}
-                >
-                  Open {product.category}
-                </button>
-              </div>
-            </article>
-          ))
-        ) : (
-          <div className="admin-empty-state">
-            <strong>No products in this category</strong>
-            <p>Dusri category select karo ya storefront catalog me products ko move karo.</p>
-          </div>
-        )}
+      <div className="admin-product-summary-grid">
+        {[
+          {
+            label: 'Visible products',
+            value: formatCompactCount(filteredManagedProducts.length),
+            note: 'Current category scope me itne products edit-ready hain.',
+          },
+          {
+            label: 'Low stock alerts',
+            value: formatCompactCount(filteredLowStockCount),
+            note: 'Jaldi replenish karne wale SKUs.',
+          },
+          {
+            label: 'Sold out styles',
+            value: formatCompactCount(filteredSoldOutCount),
+            note: 'Restock ya campaign cleanup ke liye flagged.',
+          },
+          {
+            label: '4+ gallery shots',
+            value: formatCompactCount(filteredRichGalleryCount),
+            note: 'Visual merchandising ke liye richer products.',
+          },
+        ].map((card) => (
+          <article key={card.label} className="admin-metric-card admin-metric-card--product">
+            <span>{card.label}</span>
+            <strong>{card.value}</strong>
+            <p>{card.note}</p>
+          </article>
+        ))}
       </div>
+
+      {selectedManagedProduct && productEditor ? (
+        <div className="admin-product-workbench">
+          <article className="admin-product-editor-card">
+            <div className="admin-record-head">
+              <div>
+                <p className="admin-panel-kicker">Selected product</p>
+                <strong>{selectedManagedProduct.name}</strong>
+                <p>{selectedManagedProduct.category} storefront editor</p>
+              </div>
+              <span
+                className={`admin-status-pill admin-status-pill--${getStatusTone(
+                  getInventoryStatus(selectedManagedProduct),
+                )}`}
+              >
+                {getInventoryStatus(selectedManagedProduct)}
+              </span>
+            </div>
+
+            <div className="admin-editor-layout">
+              <div className="admin-editor-preview">
+                <div className="admin-editor-preview-media">
+                  {editorCoverImagePreview ? (
+                    <img src={editorCoverImagePreview} alt={productEditor.name || 'Product preview'} />
+                  ) : (
+                    <div className="admin-editor-preview-empty">
+                      <strong>No image selected</strong>
+                      <p>Cover image ya gallery URL add karte hi preview yahan dikh jayega.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="admin-editor-preview-copy">
+                  <p className="admin-editor-eyebrow">{productEditor.label || 'Storefront label'}</p>
+                  <h3>{productEditor.name || 'Untitled Aryass Product'}</h3>
+                  <p className="admin-editor-preview-category">{productEditor.category}</p>
+
+                  <div className="admin-editor-price-row">
+                    {productEditor.oldPrice ? <span>Rs. {productEditor.oldPrice}</span> : null}
+                    <strong>Rs. {productEditor.price || '0.00'}</strong>
+                  </div>
+
+                  {productEditor.saleBadgeText ? (
+                    <div className="admin-editor-pill-row">
+                      <span className="admin-status-pill admin-status-pill--warning">
+                        {productEditor.saleBadgeText}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  <div className="admin-editor-stat-grid">
+                    <div>
+                      <span>Stock</span>
+                      <strong>{productEditor.stockCount || '0'} units</strong>
+                    </div>
+                    <div>
+                      <span>Available sizes</span>
+                      <strong>{editorAvailableSizes.join(', ') || 'No size active'}</strong>
+                    </div>
+                    <div>
+                      <span>Colors</span>
+                      <strong>{editorColorPreview.join(', ') || 'No colors added'}</strong>
+                    </div>
+                    <div>
+                      <span>Gallery shots</span>
+                      <strong>{editorGalleryPreview.length || 0}</strong>
+                    </div>
+                  </div>
+
+                  {editorGalleryPreview.length ? (
+                    <div className="admin-product-gallery-strip" aria-label="Editor gallery preview">
+                      {editorGalleryPreview.map((image, index) => (
+                        <button
+                          key={`${selectedManagedProduct.id}-editor-gallery-${index}`}
+                          type="button"
+                          className={`admin-gallery-thumb ${
+                            editorCoverImagePreview === image ? 'is-active' : ''
+                          }`}
+                          onClick={() => updateProductEditorField('coverImage', image)}
+                        >
+                          <img
+                            src={image}
+                            alt={`${productEditor.name || 'Product'} gallery ${index + 1}`}
+                            loading="lazy"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="admin-editor-form">
+                <section className="admin-editor-section">
+                  <div className="admin-panel-head">
+                    <div>
+                      <p className="admin-panel-kicker">Core details</p>
+                      <h3>Basic storefront information</h3>
+                    </div>
+                  </div>
+
+                  <div className="admin-product-controls">
+                    <label className="admin-form-field">
+                      <span>Product name</span>
+                      <input
+                        type="text"
+                        value={productEditor.name}
+                        onChange={(event) => updateProductEditorField('name', event.target.value)}
+                        placeholder="Blush Bloom Dress"
+                      />
+                    </label>
+
+                    <label className="admin-form-field">
+                      <span>Storefront label</span>
+                      <input
+                        type="text"
+                        value={productEditor.label}
+                        onChange={(event) => updateProductEditorField('label', event.target.value)}
+                        placeholder="Aryass Edit"
+                      />
+                    </label>
+
+                    <label className="admin-form-field">
+                      <span>Category</span>
+                      <select
+                        value={productEditor.category}
+                        onChange={(event) => updateProductEditorField('category', event.target.value)}
+                      >
+                        {syncedCategories.map((category) => (
+                          <option key={category} value={category}>
+                            {category}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="admin-form-field">
+                      <span>SKU</span>
+                      <input
+                        type="text"
+                        value={productEditor.sku}
+                        onChange={(event) => updateProductEditorField('sku', event.target.value)}
+                        placeholder="ARY-001-DR"
+                      />
+                    </label>
+                  </div>
+                </section>
+
+                <section className="admin-editor-section">
+                  <div className="admin-panel-head">
+                    <div>
+                      <p className="admin-panel-kicker">Pricing and stock</p>
+                      <h3>Commercial controls</h3>
+                    </div>
+                  </div>
+
+                  <div className="admin-product-controls">
+                    <label className="admin-form-field">
+                      <span>Selling price</span>
+                      <input
+                        type="text"
+                        value={productEditor.price}
+                        onChange={(event) => updateProductEditorField('price', event.target.value)}
+                        placeholder="1650.00"
+                      />
+                    </label>
+
+                    <label className="admin-form-field">
+                      <span>Compare at price</span>
+                      <input
+                        type="text"
+                        value={productEditor.oldPrice}
+                        onChange={(event) => updateProductEditorField('oldPrice', event.target.value)}
+                        placeholder="1999.00"
+                      />
+                    </label>
+
+                    <label className="admin-form-field">
+                      <span>Discount badge</span>
+                      <input
+                        type="text"
+                        value={productEditor.saleBadgeText}
+                        onChange={(event) => updateProductEditorField('saleBadgeText', event.target.value)}
+                        placeholder="15% OFF"
+                      />
+                      <small className="admin-form-hint">
+                        Blank chhodo to compare price ke basis par auto discount badge ban jayega.
+                      </small>
+                    </label>
+
+                    <label className="admin-form-field admin-form-field--wide">
+                      <span>Shipping note</span>
+                      <input
+                        type="text"
+                        value={productEditor.shippingNote}
+                        onChange={(event) => updateProductEditorField('shippingNote', event.target.value)}
+                        placeholder="Free shipping above Rs. 1,999"
+                      />
+                    </label>
+
+                    <div className="admin-form-field admin-form-field--wide">
+                      <span>Stock control</span>
+                      <div className="admin-stock-stepper">
+                        <button
+                          type="button"
+                          className="admin-inline-button"
+                          onClick={() => updateProductEditorStock(Number(productEditor.stockCount || 0) - 1)}
+                          disabled={Number(productEditor.stockCount || 0) <= 0}
+                        >
+                          -1
+                        </button>
+                        <input
+                          type="number"
+                          min="0"
+                          value={productEditor.stockCount}
+                          onChange={(event) => updateProductEditorStock(event.target.value)}
+                          aria-label={`Stock count for ${selectedManagedProduct.name}`}
+                        />
+                        <button
+                          type="button"
+                          className="admin-inline-button"
+                          onClick={() => updateProductEditorStock(Number(productEditor.stockCount || 0) + 1)}
+                        >
+                          +1
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="admin-editor-section">
+                  <div className="admin-panel-head">
+                    <div>
+                      <p className="admin-panel-kicker">Options and visuals</p>
+                      <h3>Images, colors, and sizes</h3>
+                    </div>
+                  </div>
+
+                  <div className="admin-product-controls">
+                    <label className="admin-form-field admin-form-field--wide">
+                      <span>Cover image URL</span>
+                      <input
+                        type="text"
+                        value={productEditor.coverImage}
+                        onChange={(event) => updateProductEditorField('coverImage', event.target.value)}
+                        placeholder="/catalog/your-main-image.jpeg"
+                      />
+                    </label>
+
+                    <label className="admin-form-field admin-form-field--wide">
+                      <span>Gallery image URLs</span>
+                      <textarea
+                        rows="5"
+                        value={productEditor.gallery}
+                        onChange={(event) => updateProductEditorField('gallery', event.target.value)}
+                        placeholder={'/catalog/look-1.jpeg\n/catalog/look-2.jpeg\n/catalog/look-3.jpeg'}
+                      />
+                      <small className="admin-form-hint">
+                        Har image URL ko new line par add karo. Preview thumbnail par click karke
+                        cover image choose kar sakte ho.
+                      </small>
+                    </label>
+
+                    <label className="admin-form-field admin-form-field--wide">
+                      <span>Colors</span>
+                      <input
+                        type="text"
+                        value={productEditor.colors}
+                        onChange={(event) => updateProductEditorField('colors', event.target.value)}
+                        placeholder="Baby Pink, Champagne, Pearl White"
+                      />
+                    </label>
+
+                    <label className="admin-form-field admin-form-field--wide">
+                      <span>Sizes</span>
+                      <input
+                        type="text"
+                        value={productEditor.sizes.map((size) => size.label).join(', ')}
+                        onChange={(event) => updateProductEditorSizeList(event.target.value)}
+                        placeholder="XS, S, M, L"
+                      />
+                      <small className="admin-form-hint">
+                        Size list comma separated rakho. Neeche chips par tap karke size live ya
+                        unavailable mark karo.
+                      </small>
+                      <div className="admin-size-chip-row">
+                        {productEditor.sizes.map((size) => (
+                          <button
+                            key={`${selectedManagedProduct.id}-${size.label}`}
+                            type="button"
+                            className={`admin-size-toggle ${size.available ? 'is-active' : ''}`}
+                            onClick={() => toggleProductEditorSize(size.label)}
+                            disabled={Number(productEditor.stockCount || 0) === 0}
+                          >
+                            {size.label}
+                          </button>
+                        ))}
+                      </div>
+                    </label>
+                  </div>
+                </section>
+
+                <section className="admin-editor-section">
+                  <div className="admin-panel-head">
+                    <div>
+                      <p className="admin-panel-kicker">Storefront copy</p>
+                      <h3>Description and styling content</h3>
+                    </div>
+                  </div>
+
+                  <div className="admin-product-controls">
+                    <label className="admin-form-field admin-form-field--wide">
+                      <span>Description paragraphs</span>
+                      <textarea
+                        rows="6"
+                        value={productEditor.description}
+                        onChange={(event) => updateProductEditorField('description', event.target.value)}
+                        placeholder={'Paragraph 1\n\nParagraph 2'}
+                      />
+                    </label>
+
+                    <label className="admin-form-field admin-form-field--wide">
+                      <span>Style notes</span>
+                      <textarea
+                        rows="4"
+                        value={productEditor.styleNotes}
+                        onChange={(event) => updateProductEditorField('styleNotes', event.target.value)}
+                        placeholder={'Best styled with metallic heels.\nGreat for festive evenings.\nSizes available: XS, S, M.'}
+                      />
+                    </label>
+
+                    <label className="admin-form-field">
+                      <span>Story title</span>
+                      <input
+                        type="text"
+                        value={productEditor.storyTitle}
+                        onChange={(event) => updateProductEditorField('storyTitle', event.target.value)}
+                        placeholder="Blush Bloom Dress for polished moments"
+                      />
+                    </label>
+
+                    <label className="admin-form-field">
+                      <span>Story text</span>
+                      <textarea
+                        rows="4"
+                        value={productEditor.storyText}
+                        onChange={(event) => updateProductEditorField('storyText', event.target.value)}
+                        placeholder="Add the editorial story customers see lower on the product page."
+                      />
+                    </label>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            {editorDescriptionPreview.length ? (
+              <div className="admin-editor-copy-preview">
+                <p className="admin-panel-kicker">Copy preview</p>
+                {editorDescriptionPreview.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="admin-editor-toolbar">
+              <div className="admin-record-actions">
+                <button type="button" className="admin-ghost-button" onClick={saveProductEditor}>
+                  Save product
+                </button>
+                <button type="button" className="admin-inline-button" onClick={resetProductEditor}>
+                  Reset draft
+                </button>
+                {isCustomProduct(selectedManagedProduct.id) ? (
+                  <button
+                    type="button"
+                    className="admin-inline-button admin-inline-button--danger"
+                    onClick={deleteSelectedProduct}
+                  >
+                    Delete custom product
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="admin-inline-button"
+                  onClick={() =>
+                    updateProductEditorStock(Number(productEditor.stockCount || 0) ? 0 : 8)
+                  }
+                >
+                  {Number(productEditor.stockCount || 0) ? 'Set draft sold out' : 'Set draft stock 8'}
+                </button>
+                <button
+                  type="button"
+                  className="admin-inline-button"
+                  onClick={() => openCategoryProducts(productEditor.category)}
+                >
+                  Open {productEditor.category}
+                </button>
+              </div>
+
+              {productEditorNotice ? <p className="admin-editor-notice">{productEditorNotice}</p> : null}
+            </div>
+          </article>
+
+          <aside className="admin-product-browser">
+            <div className="admin-panel-head">
+              <div>
+                <p className="admin-panel-kicker">Catalog explorer</p>
+                <h3>Pick a product to edit</h3>
+              </div>
+              <p>{filteredManagedProducts.length} products visible in this view.</p>
+            </div>
+
+            <div className="admin-product-browser-list">
+              {filteredManagedProducts.map((product) => (
+                <button
+                  key={product.id}
+                  type="button"
+                  className={`admin-browser-card ${
+                    selectedManagedProduct.id === product.id ? 'is-active' : ''
+                  }`}
+                  onClick={() => setSelectedAdminProductId(product.id)}
+                >
+                  <div className="admin-browser-card-media">
+                    <img src={product.image} alt={product.name} loading="lazy" />
+                  </div>
+
+                  <div className="admin-browser-card-copy">
+                    <div className="admin-browser-card-head">
+                      <strong>{product.name}</strong>
+                      <p>{product.category}</p>
+                    </div>
+
+                    <div className="admin-browser-card-meta">
+                      <span>Rs. {product.price}</span>
+                      <span>{product.stockCount} in stock</span>
+                    </div>
+
+                    <div className="admin-browser-card-footer">
+                      <span
+                        className={`admin-status-pill admin-status-pill--${getStatusTone(
+                          getInventoryStatus(product),
+                        )}`}
+                      >
+                        {getInventoryStatus(product)}
+                      </span>
+                      <small>{product.sizes.filter((size) => size.available).length} sizes live</small>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </aside>
+        </div>
+      ) : (
+        <div className="admin-empty-state">
+          <strong>No products in this category</strong>
+          <p>Dusri category select karo ya storefront catalog me products ko move karo.</p>
+          <button type="button" className="admin-inline-button" onClick={createNewProductDraft}>
+            Add new product
+          </button>
+        </div>
+      )}
     </section>
   )
 
