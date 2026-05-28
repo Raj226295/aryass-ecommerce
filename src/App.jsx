@@ -150,19 +150,24 @@ function getDefaultManagedDeliveryMeta() {
 
 function normalizeStoredManagedProduct(storedProduct, fallbackProduct = null) {
   const baseProduct = fallbackProduct || {}
+  const isDraft = Boolean(storedProduct?.isDraft ?? baseProduct.isDraft)
   const resolvedCategory = mobileMenuItems.includes(storedProduct?.category)
     ? storedProduct.category
     : baseProduct.category || defaultCategory
-  const resolvedName =
-    String(storedProduct?.name || baseProduct.name || `Untitled ${resolvedCategory}`).trim() ||
-    `Untitled ${resolvedCategory}`
-  const resolvedPrice =
-    normalizeManagedPriceInput(storedProduct?.price, baseProduct.price || '1,999.00') ||
-    baseProduct.price ||
-    '1,999.00'
-  const resolvedOldPrice = Object.hasOwn(storedProduct || {}, 'oldPrice')
-    ? normalizeManagedPriceInput(storedProduct?.oldPrice, '')
-    : baseProduct.oldPrice
+  const resolvedName = isDraft
+    ? String(storedProduct?.name || baseProduct.name || '').trim() || `New ${resolvedCategory} Draft`
+    : String(storedProduct?.name || baseProduct.name || `Untitled ${resolvedCategory}`).trim() ||
+      `Untitled ${resolvedCategory}`
+  const resolvedPrice = isDraft
+    ? normalizeManagedPriceInput(storedProduct?.price ?? baseProduct.price, '')
+    : normalizeManagedPriceInput(storedProduct?.price, baseProduct.price || '1,999.00') ||
+      baseProduct.price ||
+      '1,999.00'
+  const resolvedOldPrice = isDraft
+    ? normalizeManagedPriceInput(storedProduct?.oldPrice ?? baseProduct.oldPrice, '')
+    : Object.hasOwn(storedProduct || {}, 'oldPrice')
+      ? normalizeManagedPriceInput(storedProduct?.oldPrice, '')
+      : baseProduct.oldPrice
   const resolvedStockCount = Math.max(
     0,
     Number(storedProduct?.stockCount ?? baseProduct.stockCount ?? 0) || 0,
@@ -173,26 +178,28 @@ function normalizeStoredManagedProduct(storedProduct, fallbackProduct = null) {
     storedProduct?.gallery ?? baseProduct.gallery ?? [resolvedImage],
     resolvedImage,
   )
-  const resolvedColors = normalizeManagedList(
-    storedProduct?.colors ?? baseProduct.colors ?? ['Ivory', 'Black'],
-  )
-  const resolvedSizes = normalizeManagedSizes(
-    storedProduct?.sizes ?? baseProduct.sizes,
-    baseProduct.sizes,
-    resolvedSoldOut,
-  )
-  const resolvedDescription = normalizeManagedParagraphs(
-    storedProduct?.description ??
-      baseProduct.description ?? [
-        `${resolvedName} ko premium storefront listing ke liye detailed description chahiye.`,
-      ],
-  )
-  const resolvedStyleNotes = normalizeManagedLineList(
-    storedProduct?.styleNotes ??
-      baseProduct.styleNotes ?? [
-        `Perfect for ${resolvedCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`,
-      ],
-  )
+  const resolvedColors = isDraft
+    ? normalizeManagedList(storedProduct?.colors ?? baseProduct.colors ?? [])
+    : normalizeManagedList(storedProduct?.colors ?? baseProduct.colors ?? ['Ivory', 'Black'])
+  const resolvedSizes = isDraft
+    ? normalizeManagedDraftSizes(storedProduct?.sizes ?? baseProduct.sizes ?? [], resolvedSoldOut)
+    : normalizeManagedSizes(storedProduct?.sizes ?? baseProduct.sizes, baseProduct.sizes, resolvedSoldOut)
+  const resolvedDescription = isDraft
+    ? normalizeManagedParagraphs(storedProduct?.description ?? baseProduct.description ?? [])
+    : normalizeManagedParagraphs(
+        storedProduct?.description ??
+          baseProduct.description ?? [
+            `${resolvedName} ko premium storefront listing ke liye detailed description chahiye.`,
+          ],
+      )
+  const resolvedStyleNotes = isDraft
+    ? normalizeManagedLineList(storedProduct?.styleNotes ?? baseProduct.styleNotes ?? [])
+    : normalizeManagedLineList(
+        storedProduct?.styleNotes ??
+          baseProduct.styleNotes ?? [
+            `Perfect for ${resolvedCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`,
+          ],
+      )
   const resolvedDeliveryMeta =
     Array.isArray(storedProduct?.deliveryMeta) && storedProduct.deliveryMeta.length
       ? storedProduct.deliveryMeta
@@ -202,6 +209,7 @@ function normalizeStoredManagedProduct(storedProduct, fallbackProduct = null) {
   const normalizedProduct = {
     ...baseProduct,
     ...storedProduct,
+    isDraft,
     id: storedProduct?.id || baseProduct.id,
     name: resolvedName,
     price: resolvedPrice,
@@ -213,34 +221,40 @@ function normalizeStoredManagedProduct(storedProduct, fallbackProduct = null) {
       resolvedGallery.length
         ? resolvedGallery
         : [resolvedImage || baseProduct.image].filter(Boolean),
-    colors: resolvedColors.length ? resolvedColors : baseProduct.colors || ['Ivory', 'Black'],
+    colors: resolvedColors.length ? resolvedColors : isDraft ? [] : baseProduct.colors || ['Ivory', 'Black'],
     sizes: resolvedSizes,
     stockCount: resolvedStockCount,
     soldOut: resolvedSoldOut,
     shippingNote:
       String(storedProduct?.shippingNote || baseProduct.shippingNote || '').trim() ||
-      'Free shipping above Rs. 1,999',
+      (isDraft ? '' : 'Free shipping above Rs. 1,999'),
     sku:
       String(storedProduct?.sku || baseProduct.sku || '').trim().toUpperCase() ||
       `ARY-CUSTOM-${resolvedCategory.slice(0, 2).toUpperCase()}`,
-    label: String(storedProduct?.label || baseProduct.label || '').trim() || 'Aryass Edit',
+    label: String(storedProduct?.label || baseProduct.label || '').trim() || (isDraft ? 'Draft product' : 'Aryass Edit'),
     description:
       resolvedDescription.length
         ? resolvedDescription
-        : baseProduct.description || [`${resolvedName} is ready for a better storefront story.`],
+        : isDraft
+          ? []
+          : baseProduct.description || [`${resolvedName} is ready for a better storefront story.`],
     styleNotes:
       resolvedStyleNotes.length
         ? resolvedStyleNotes
-        : baseProduct.styleNotes || [
-            `Perfect for ${resolvedCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`,
-          ],
+        : isDraft
+          ? []
+          : baseProduct.styleNotes || [
+              `Perfect for ${resolvedCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`,
+            ],
     deliveryMeta: resolvedDeliveryMeta,
     storyTitle:
       String(storedProduct?.storyTitle || baseProduct.storyTitle || '').trim() ||
-      `${resolvedName} for polished moments`,
+      (isDraft ? '' : `${resolvedName} for polished moments`),
     storyText:
       String(storedProduct?.storyText || baseProduct.storyText || '').trim() ||
-      'Aryass pieces are designed to move from intimate celebrations to elevated city looks without losing their soft, graceful appeal.',
+      (isDraft
+        ? ''
+        : 'Aryass pieces are designed to move from intimate celebrations to elevated city looks without losing their soft, graceful appeal.'),
     saleBadgeText: String(storedProduct?.saleBadgeText || baseProduct.saleBadgeText || '').trim(),
     rating: Number(storedProduct?.rating ?? baseProduct.rating ?? 0) || 0,
     reviews: Number(storedProduct?.reviews ?? baseProduct.reviews ?? 0) || 0,
@@ -637,7 +651,45 @@ function normalizeManagedSizes(sizeInput, currentSizes = [], soldOut = false) {
   return sizesWithStockState
 }
 
+function normalizeManagedDraftSizes(sizeInput = [], soldOut = false) {
+  if (!Array.isArray(sizeInput) || !sizeInput.length) {
+    return []
+  }
+
+  const normalizedSizes = sizeInput
+    .map((size) => {
+      if (typeof size === 'string') {
+        const label = size.trim().toUpperCase()
+
+        return label
+          ? {
+              label,
+              available: !soldOut,
+            }
+          : null
+      }
+
+      const label = String(size?.label || '').trim().toUpperCase()
+
+      if (!label) {
+        return null
+      }
+
+      return {
+        label,
+        available: soldOut ? false : Boolean(size?.available),
+      }
+    })
+    .filter(Boolean)
+    .filter((size, index, sizes) => sizes.findIndex((item) => item.label === size.label) === index)
+
+  return normalizedSizes
+}
+
 function syncManagedProductDetails(product, nextDetails = {}) {
+  const nextIsDraft = Object.hasOwn(nextDetails, 'isDraft')
+    ? Boolean(nextDetails.isDraft)
+    : Boolean(product.isDraft)
   const nextCategory =
     typeof nextDetails.category === 'string' && mobileMenuItems.includes(nextDetails.category)
       ? nextDetails.category
@@ -647,7 +699,7 @@ function syncManagedProductDetails(product, nextDetails = {}) {
     : String(product.saleBadgeText || '').trim()
   const nextPrice =
     Object.hasOwn(nextDetails, 'price')
-      ? normalizeManagedPriceInput(nextDetails.price, product.price)
+      ? normalizeManagedPriceInput(nextDetails.price, nextIsDraft ? '' : product.price)
       : product.price
   const nextOldPrice =
     Object.hasOwn(nextDetails, 'oldPrice')
@@ -686,11 +738,16 @@ function syncManagedProductDetails(product, nextDetails = {}) {
         ? product.gallery
         : [product.image].filter(Boolean)
   const nextImage = requestedCoverImage || nextGallery[0] || product.image
-  const nextSizes = normalizeManagedSizes(
-    Object.hasOwn(nextDetails, 'sizes') ? nextDetails.sizes : product.sizes,
-    product.sizes,
-    soldOut,
-  )
+  const nextSizes = nextIsDraft
+    ? normalizeManagedDraftSizes(
+        Object.hasOwn(nextDetails, 'sizes') ? nextDetails.sizes : product.sizes,
+        soldOut,
+      )
+    : normalizeManagedSizes(
+        Object.hasOwn(nextDetails, 'sizes') ? nextDetails.sizes : product.sizes,
+        product.sizes,
+        soldOut,
+      )
   const nextSku = Object.hasOwn(nextDetails, 'sku')
     ? String(nextDetails.sku || '').trim().toUpperCase()
     : nextCategory !== product.category
@@ -698,6 +755,7 @@ function syncManagedProductDetails(product, nextDetails = {}) {
       : product.sku
   const nextProduct = {
     ...product,
+    isDraft: nextIsDraft,
     name: Object.hasOwn(nextDetails, 'name')
       ? String(nextDetails.name || '').trim() || product.name
       : product.name,
@@ -747,58 +805,41 @@ function isCustomManagedProductId(productId = '') {
 
 function buildNewManagedProduct(products, preferredCategory = defaultCategory) {
   const nextCategory = mobileMenuItems.includes(preferredCategory) ? preferredCategory : defaultCategory
-  const categoryTemplate =
-    products.find((product) => product.category === nextCategory) ||
-    products.find((product) => product.category === defaultCategory) ||
-    products[0] ||
-    null
   const nextId = `aryass-custom-${Date.now()}`
   const nextSku = `ARY-CUSTOM-${String(products.filter((product) => isCustomManagedProductId(product.id)).length + 1).padStart(3, '0')}`
-  const nextName = `New ${nextCategory}`
-  const templateImage =
-    categoryTemplate?.image ||
-    categoryTemplate?.gallery?.[0] ||
-    '/catalog/pexels-photo-34959983.jpeg'
+  const nextName = `New ${nextCategory} Draft`
   const baseProduct = {
-    ...(categoryTemplate || {}),
     id: nextId,
     name: nextName,
     category: nextCategory,
-    price: '1,999.00',
+    isDraft: true,
+    price: '',
     oldPrice: '',
     rating: 0,
     reviews: 0,
-    soldOut: false,
+    soldOut: true,
     asSeenOn: false,
-    stockCount: 8,
-    image: templateImage,
-    gallery: [templateImage].filter(Boolean),
-    colors: ['Ivory', 'Champagne', 'Black'],
-    sizes: [
-      { label: 'XS', available: true },
-      { label: 'S', available: true },
-      { label: 'M', available: true },
-      { label: 'L', available: true },
-    ],
+    stockCount: 0,
+    image: '',
+    gallery: [],
+    colors: [],
+    sizes: [],
     sku: nextSku,
-    shippingNote: 'Free shipping above Rs. 1,999',
-    label: 'New Launch',
-    description: [
-      `${nextName} ko admin se complete detail ke saath customise karke live storefront par publish kiya ja sakta hai.`,
-      'Fabric story, fit notes, aur occasion styling yahan add karke customer-facing product page ko complete banaya ja sakta hai.',
-    ],
-    styleNotes: [
-      `Perfect for ${nextCategory.toLowerCase()} lovers jo statement look ke saath comfort bhi chahte hain.`,
-      'Best styled with refined accessories, sleek footwear, and a confident evening mood.',
-    ],
+    shippingNote: '',
+    label: '',
+    description: [],
+    styleNotes: [],
     deliveryMeta: getDefaultManagedDeliveryMeta(),
-    storyTitle: `${nextName} for polished moments`,
-    storyText:
-      'Aryass pieces are designed to move from intimate celebrations to elevated city looks without losing their soft, graceful appeal.',
+    storyTitle: '',
+    storyText: '',
     saleBadgeText: '',
   }
 
   return normalizeStoredManagedProduct(baseProduct)
+}
+
+function isStorefrontVisibleProduct(product = null) {
+  return Boolean(product) && !product.isDraft
 }
 
 function App() {
@@ -856,12 +897,13 @@ function App() {
   const [activeDrawerAccountPanel, setActiveDrawerAccountPanel] = useState('')
 
   const otpInputRefs = useRef([])
+  const storefrontProducts = products.filter(isStorefrontVisibleProduct)
   const isWishlistItemSaved = (productId, size, color) =>
     wishlistItems.some(
       (item) => item.id === productId && item.size === size && item.color === color,
     )
 
-  const selectedProduct = products.find((product) => product.id === selectedProductId) || null
+  const selectedProduct = storefrontProducts.find((product) => product.id === selectedProductId) || null
   const selectedProductReviews = selectedProduct
     ? reviews.filter((review) => review.productId === selectedProduct.id)
     : []
@@ -873,8 +915,8 @@ function App() {
     ? isWishlistItemSaved(selectedProduct.id, selectedSize, selectedColor)
     : false
   const activeCategoryProducts = isCategoryScoped
-    ? products.filter((product) => product.category === activeCategory)
-    : products
+    ? storefrontProducts.filter((product) => product.category === activeCategory)
+    : storefrontProducts
   const currentOfferSlides = getOfferSlidesForCategory(activeCategory, !isCategoryScoped)
   const sizeMatchedProducts = activeCategoryProducts.filter((product) =>
     matchSizeFilter(product, selectedFilterSizes),
@@ -893,20 +935,23 @@ function App() {
       product.sizes.some((size) => size.label === label && size.available),
     ).length,
   }))
+  const priceSourceProducts = sizeMatchedProducts.length ? sizeMatchedProducts : activeCategoryProducts
   const highestVisiblePrice = sizeMatchedProducts.length
     ? Math.max(...sizeMatchedProducts.map((product) => product.priceValue))
-    : Math.max(...activeCategoryProducts.map((product) => product.priceValue))
+    : priceSourceProducts.length
+      ? Math.max(...priceSourceProducts.map((product) => product.priceValue))
+      : 0
   const currentCollectionContent = isCategoryScoped
     ? collectionContentByCategory[activeCategory] || collectionContentByCategory[defaultCategory]
     : landingCollectionContent
   const currentCollectionTitle = isCategoryScoped ? activeCategory : landingCollectionContent.title
   const relatedProducts = selectedProduct
     ? [
-        ...products.filter(
+        ...storefrontProducts.filter(
           (product) =>
             product.category === selectedProduct.category && product.id !== selectedProduct.id,
         ),
-        ...products.filter(
+        ...storefrontProducts.filter(
           (product) =>
             product.category !== selectedProduct.category && product.id !== selectedProduct.id,
         ),
@@ -1101,9 +1146,13 @@ function App() {
   }
 
   const createAdminProduct = (preferredCategory) => {
-    const nextProduct = buildNewManagedProduct(products, preferredCategory)
+    let nextProduct = null
 
-    setProducts((currentProducts) => [nextProduct, ...currentProducts])
+    setProducts((currentProducts) => {
+      nextProduct = buildNewManagedProduct(currentProducts, preferredCategory)
+      return nextProduct ? [nextProduct, ...currentProducts] : currentProducts
+    })
+
     return nextProduct
   }
 

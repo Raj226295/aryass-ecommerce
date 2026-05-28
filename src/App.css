@@ -5809,6 +5809,27 @@ left: 0;
   object-fit: cover;
 }
 
+.admin-browser-card-placeholder {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  gap: 0.25rem;
+  padding: 1rem;
+  text-align: center;
+  color: #6f5e51;
+}
+
+.admin-browser-card-placeholder strong,
+.admin-browser-card-placeholder span {
+  margin: 0;
+}
+
+.admin-browser-card-placeholder strong {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  color: #3c2d24;
+}
+
 .admin-browser-card-copy,
 .admin-browser-card-head,
 .admin-browser-card-meta,

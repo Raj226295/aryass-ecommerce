@@ -336,6 +336,10 @@ function parseEditorParagraphs(value) {
 }
 
 function getInventoryStatus(product) {
+  if (product?.isDraft) {
+    return 'Draft'
+  }
+
   if (product.soldOut) {
     return 'Out of Stock'
   }
@@ -349,6 +353,66 @@ function getInventoryStatus(product) {
 
 function isCustomProduct(productId = '') {
   return String(productId).startsWith('aryass-custom-')
+}
+
+function getAdminProductDisplayName(product) {
+  return String(product?.name || '').trim() || 'New product draft'
+}
+
+function getAdminProductPriceText(product) {
+  return product?.price ? `Rs. ${product.price}` : 'Price pending'
+}
+
+function getAdminProductStockText(product) {
+  if (product?.isDraft) {
+    return 'Admin draft'
+  }
+
+  return `${product?.stockCount || 0} in stock`
+}
+
+function getDraftPublishValidationErrors(editor) {
+  if (!editor) {
+    return []
+  }
+
+  const galleryImages = parseEditorList(editor.gallery)
+  const coverImage = String(editor.coverImage || '').trim() || galleryImages[0] || ''
+  const errors = []
+
+  if (!String(editor.name || '').trim()) {
+    errors.push('product name')
+  }
+
+  if (!String(editor.price || '').trim()) {
+    errors.push('selling price')
+  }
+
+  if (!coverImage) {
+    errors.push('cover image')
+  }
+
+  if (!parseEditorList(editor.colors).length) {
+    errors.push('colors')
+  }
+
+  if (!Array.isArray(editor.sizes) || !editor.sizes.length) {
+    errors.push('sizes')
+  }
+
+  if (!parseEditorParagraphs(editor.description).length) {
+    errors.push('description')
+  }
+
+  if (!String(editor.storyTitle || '').trim()) {
+    errors.push('story title')
+  }
+
+  if (!String(editor.storyText || '').trim()) {
+    errors.push('story text')
+  }
+
+  return errors
 }
 
 function AdminPage({
@@ -379,6 +443,7 @@ function AdminPage({
   const [selectedCustomerId, setSelectedCustomerId] = useState(
     () => buildInitialCustomers(accountProfile)[0]?.id || '',
   )
+  const liveProducts = products.filter((product) => !product.isDraft)
   const syncedCategories = menuCategories?.length
     ? menuCategories
     : [...new Set(products.map((product) => product.category))]
@@ -398,7 +463,7 @@ function AdminPage({
   const pendingOrders = orderRows.filter((order) => getOrderFilterKey(order.status) === 'pending').length
   const deliveredOrders = orderRows.filter((order) => getOrderFilterKey(order.status) === 'delivered').length
   const totalUsers = Math.max(1240, managedCustomers.length)
-  const totalProducts = products.length
+  const totalProducts = liveProducts.length
 
   const filteredOrders =
     activeOrderFilter === 'all'
@@ -426,7 +491,7 @@ function AdminPage({
       ? paymentRows
       : paymentRows.filter((payment) => getPaymentFilterKey(payment.status) === activePaymentFilter)
 
-  const inventoryRows = products.map((product) => {
+  const inventoryRows = liveProducts.map((product) => {
     const oldPriceValue = parsePriceValue(product.oldPrice)
     const priceValue = parsePriceValue(product.price)
     const discount =
@@ -474,11 +539,13 @@ function AdminPage({
     filteredManagedProducts.find((product) => product.id === selectedAdminProductId) ||
     filteredManagedProducts[0] ||
     null
-  const filteredLowStockCount = filteredManagedProducts.filter(
+  const filteredLiveProducts = filteredManagedProducts.filter((product) => !product.isDraft)
+  const filteredDraftCount = filteredManagedProducts.filter((product) => product.isDraft).length
+  const filteredLowStockCount = filteredLiveProducts.filter(
     (product) => !product.soldOut && product.stockCount < 6,
   ).length
-  const filteredSoldOutCount = filteredManagedProducts.filter((product) => product.soldOut).length
-  const filteredRichGalleryCount = filteredManagedProducts.filter(
+  const filteredSoldOutCount = filteredLiveProducts.filter((product) => product.soldOut).length
+  const filteredRichGalleryCount = filteredLiveProducts.filter(
     (product) => Array.isArray(product.gallery) && product.gallery.length >= 4,
   ).length
 
@@ -680,9 +747,20 @@ function AdminPage({
     setProductEditorNotice('Unsaved edits discarded.')
   }
 
-  const saveProductEditor = () => {
+  const persistProductEditor = ({ publish = false } = {}) => {
     if (!selectedManagedProduct || !productEditor) {
       return
+    }
+
+    if (selectedManagedProduct.isDraft && publish) {
+      const validationErrors = getDraftPublishValidationErrors(productEditor)
+
+      if (validationErrors.length) {
+        setProductEditorNotice(
+          `Publish karne se pehle ye fields fill karo: ${validationErrors.join(', ')}.`,
+        )
+        return
+      }
     }
 
     onUpdateProductDetails(selectedManagedProduct.id, {
@@ -706,8 +784,15 @@ function AdminPage({
         .filter(Boolean),
       storyTitle: productEditor.storyTitle,
       storyText: productEditor.storyText,
+      isDraft: selectedManagedProduct.isDraft ? !publish : false,
     })
-    setProductEditorNotice('Storefront product updated successfully.')
+    setProductEditorNotice(
+      selectedManagedProduct.isDraft
+        ? publish
+          ? 'New product publish ho gaya. Ab ye storefront par visible hai.'
+          : 'Draft save ho gaya. Ab admin aur details add karke publish kar sakta hai.'
+        : 'Storefront product updated successfully.',
+    )
   }
 
   const deleteSelectedProduct = () => {
@@ -908,7 +993,7 @@ function AdminPage({
           </div>
 
           <button type="button" className="admin-ghost-button" onClick={createNewProductDraft}>
-            Add new product
+            Add product draft
           </button>
         </div>
       </div>
@@ -916,9 +1001,14 @@ function AdminPage({
       <div className="admin-product-summary-grid">
         {[
           {
-            label: 'Visible products',
-            value: formatCompactCount(filteredManagedProducts.length),
-            note: 'Current category scope me itne products edit-ready hain.',
+            label: 'Live products',
+            value: formatCompactCount(filteredLiveProducts.length),
+            note: 'Storefront par abhi itne products visible hain.',
+          },
+          {
+            label: 'Draft products',
+            value: formatCompactCount(filteredDraftCount),
+            note: 'Admin fill aur publish ke wait me products.',
           },
           {
             label: 'Low stock alerts',
@@ -950,8 +1040,11 @@ function AdminPage({
             <div className="admin-record-head">
               <div>
                 <p className="admin-panel-kicker">Selected product</p>
-                <strong>{selectedManagedProduct.name}</strong>
-                <p>{selectedManagedProduct.category} storefront editor</p>
+                <strong>{getAdminProductDisplayName(selectedManagedProduct)}</strong>
+                <p>
+                  {selectedManagedProduct.category}{' '}
+                  {selectedManagedProduct.isDraft ? 'draft editor' : 'storefront editor'}
+                </p>
               </div>
               <span
                 className={`admin-status-pill admin-status-pill--${getStatusTone(
@@ -976,13 +1069,15 @@ function AdminPage({
                 </div>
 
                 <div className="admin-editor-preview-copy">
-                  <p className="admin-editor-eyebrow">{productEditor.label || 'Storefront label'}</p>
-                  <h3>{productEditor.name || 'Untitled Aryass Product'}</h3>
+                  <p className="admin-editor-eyebrow">
+                    {productEditor.label || (selectedManagedProduct.isDraft ? 'Draft product' : 'Storefront label')}
+                  </p>
+                  <h3>{productEditor.name || getAdminProductDisplayName(selectedManagedProduct)}</h3>
                   <p className="admin-editor-preview-category">{productEditor.category}</p>
 
                   <div className="admin-editor-price-row">
                     {productEditor.oldPrice ? <span>Rs. {productEditor.oldPrice}</span> : null}
-                    <strong>Rs. {productEditor.price || '0.00'}</strong>
+                    <strong>{productEditor.price ? `Rs. ${productEditor.price}` : 'Price pending'}</strong>
                   </div>
 
                   {productEditor.saleBadgeText ? (
@@ -1159,7 +1254,7 @@ function AdminPage({
                           min="0"
                           value={productEditor.stockCount}
                           onChange={(event) => updateProductEditorStock(event.target.value)}
-                          aria-label={`Stock count for ${selectedManagedProduct.name}`}
+                          aria-label={`Stock count for ${getAdminProductDisplayName(selectedManagedProduct)}`}
                         />
                         <button
                           type="button"
@@ -1309,9 +1404,32 @@ function AdminPage({
 
             <div className="admin-editor-toolbar">
               <div className="admin-record-actions">
-                <button type="button" className="admin-ghost-button" onClick={saveProductEditor}>
-                  Save product
-                </button>
+                {selectedManagedProduct.isDraft ? (
+                  <>
+                    <button
+                      type="button"
+                      className="admin-ghost-button"
+                      onClick={() => persistProductEditor()}
+                    >
+                      Save draft
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-inline-button"
+                      onClick={() => persistProductEditor({ publish: true })}
+                    >
+                      Publish product
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="admin-ghost-button"
+                    onClick={() => persistProductEditor()}
+                  >
+                    Save product
+                  </button>
+                )}
                 <button type="button" className="admin-inline-button" onClick={resetProductEditor}>
                   Reset draft
                 </button>
@@ -1352,7 +1470,7 @@ function AdminPage({
                 <p className="admin-panel-kicker">Catalog explorer</p>
                 <h3>Pick a product to edit</h3>
               </div>
-              <p>{filteredManagedProducts.length} products visible in this view.</p>
+              <p>{filteredManagedProducts.length} product cards visible in this view.</p>
             </div>
 
             <div className="admin-product-browser-list">
@@ -1366,18 +1484,29 @@ function AdminPage({
                   onClick={() => setSelectedAdminProductId(product.id)}
                 >
                   <div className="admin-browser-card-media">
-                    <img src={product.image} alt={product.name} loading="lazy" />
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={getAdminProductDisplayName(product)}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="admin-browser-card-placeholder">
+                        <strong>Draft</strong>
+                        <span>Add image</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="admin-browser-card-copy">
                     <div className="admin-browser-card-head">
-                      <strong>{product.name}</strong>
+                      <strong>{getAdminProductDisplayName(product)}</strong>
                       <p>{product.category}</p>
                     </div>
 
                     <div className="admin-browser-card-meta">
-                      <span>Rs. {product.price}</span>
-                      <span>{product.stockCount} in stock</span>
+                      <span>{getAdminProductPriceText(product)}</span>
+                      <span>{getAdminProductStockText(product)}</span>
                     </div>
 
                     <div className="admin-browser-card-footer">
@@ -1388,7 +1517,11 @@ function AdminPage({
                       >
                         {getInventoryStatus(product)}
                       </span>
-                      <small>{product.sizes.filter((size) => size.available).length} sizes live</small>
+                      <small>
+                        {product.isDraft
+                          ? 'Admin can fill details now'
+                          : `${product.sizes.filter((size) => size.available).length} sizes live`}
+                      </small>
                     </div>
                   </div>
                 </button>
@@ -1401,7 +1534,7 @@ function AdminPage({
           <strong>No products in this category</strong>
           <p>Dusri category select karo ya storefront catalog me products ko move karo.</p>
           <button type="button" className="admin-inline-button" onClick={createNewProductDraft}>
-            Add new product
+            Add product draft
           </button>
         </div>
       )}
